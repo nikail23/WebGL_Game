@@ -2,7 +2,8 @@
   "name": "my-game",
   "version": "1.0.0",
   "scripts": {
-    "build": "webpack"
+    "build": "webpack",
+    "dev": "webpack --watch --mode development"
   },
   "devDependencies": {
     "@types/node": "^22.9.1",

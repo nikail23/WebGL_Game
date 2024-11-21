@@ -1,55 +1,84 @@
-import { Buffer } from "./buffer";
 import { ShaderProgram } from "./shader";
 
 export class BufferManager {
   private gl: WebGLRenderingContext;
-  private positionBuffer: Buffer;
-  private colorBuffer: Buffer;
-  private indexBuffer: Buffer;
+  private objectBuffers: Map<
+    string,
+    {
+      position: WebGLBuffer;
+      color: WebGLBuffer;
+      index: WebGLBuffer;
+      indexCount: number;
+    }
+  > = new Map();
 
   constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
-    this.positionBuffer = new Buffer(gl);
-    this.colorBuffer = new Buffer(gl);
-    this.indexBuffer = new Buffer(gl);
   }
 
-  public initBuffers(
+  public initObjectBuffers(
+    name: string,
     positions: number[],
     colors: number[],
     indices: number[]
-  ): void {
-    this.positionBuffer.setData(
+  ) {
+    const positionBuffer = this.gl.createBuffer();
+    const colorBuffer = this.gl.createBuffer();
+    const indexBuffer = this.gl.createBuffer();
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
+    this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(positions),
       this.gl.STATIC_DRAW
     );
-    this.colorBuffer.setData(
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer);
+    this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(colors),
       this.gl.STATIC_DRAW
     );
-    this.indexBuffer.setData(
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    this.gl.bufferData(
       this.gl.ELEMENT_ARRAY_BUFFER,
       new Uint16Array(indices),
       this.gl.STATIC_DRAW
     );
+
+    this.objectBuffers.set(name, {
+      position: positionBuffer!,
+      color: colorBuffer!,
+      index: indexBuffer!,
+      indexCount: indices.length,
+    });
   }
 
-  public bindBuffers(shaderProgram: ShaderProgram): void {
-    const program = shaderProgram.WebGlProgram;
-    const positionLocation = this.gl.getAttribLocation(
-      program,
-      "aVertexPosition"
-    );
-    const colorLocation = this.gl.getAttribLocation(program, "aVertexColor");
+  public bindObjectBuffers(name: string, shaderProgram: ShaderProgram) {
+    const buffers = this.objectBuffers.get(name);
+    if (!buffers) return;
 
-    this.positionBuffer.setupAttribute(
+    const positionLocation = shaderProgram.getAttribLocation("aVertexPosition");
+    const colorLocation = shaderProgram.getAttribLocation("aVertexColor");
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.position);
+    this.gl.vertexAttribPointer(
       positionLocation,
-      this.gl.ARRAY_BUFFER,
-      3
+      3,
+      this.gl.FLOAT,
+      false,
+      0,
+      0
     );
-    this.colorBuffer.setupAttribute(colorLocation, this.gl.ARRAY_BUFFER, 4);
-    this.indexBuffer.bind(this.gl.ELEMENT_ARRAY_BUFFER);
+    this.gl.enableVertexAttribArray(positionLocation);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.color);
+    this.gl.vertexAttribPointer(colorLocation, 4, this.gl.FLOAT, false, 0, 0);
+    this.gl.enableVertexAttribArray(colorLocation);
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffers.index);
+
+    return buffers.indexCount;
   }
 }

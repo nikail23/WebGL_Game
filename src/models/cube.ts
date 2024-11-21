@@ -1,6 +1,6 @@
 export class Cube {
   // Вершины куба
-  readonly positions: number[] = [
+  positions: number[] = [
     // Front face
     -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
     // Back face
@@ -76,4 +76,10 @@ export class Cube {
     22,
     23, // left
   ];
+
+  constructor() {
+    this.positions = this.positions.map(
+      (v, i) => (i % 3 === 1 ? v + 1 : v) // Добавляем 1 к Y-координатам
+    );
+  }
 }

@@ -3,6 +3,8 @@ import { ShaderProgram } from "./core/shader";
 import { Cube } from "./models/cube";
 import { BufferManager } from "./core/bufferManager";
 import { ShaderLoader } from "./core/shaderLoader";
+import { Camera } from "./core/camera";
+import { Floor } from "./models/floor";
 
 export class Game {
   private canvas!: HTMLCanvasElement;
@@ -10,7 +12,9 @@ export class Game {
   private lastTime!: number;
   private shaderProgram!: ShaderProgram;
   private bufferManager!: BufferManager;
-  private cube = new Cube();
+  private cube!: Cube;
+  private floor!: Floor;
+  private camera!: Camera;
   private projectionMatrix!: mat4;
   private modelViewMatrix!: mat4;
 
@@ -20,6 +24,10 @@ export class Game {
 
   private async initGame(canvas: HTMLCanvasElement): Promise<void> {
     this.canvas = canvas;
+    canvas.addEventListener("click", () => {
+      canvas.requestPointerLock();
+    });
+
     this.lastTime = 0;
     this.projectionMatrix = mat4.create();
     this.modelViewMatrix = mat4.create();
@@ -28,14 +36,26 @@ export class Game {
     if (!this.gl) {
       throw new Error("WebGL not supported");
     }
+
+    this.cube = new Cube();
+    this.floor = new Floor();
+    this.camera = new Camera();
+
     const { vs, fs } = await ShaderLoader.loadShaders();
     this.shaderProgram = new ShaderProgram(this.gl, vs, fs);
     this.initWebGL();
     this.bufferManager = new BufferManager(this.gl);
-    this.bufferManager.initBuffers(
+    this.bufferManager.initObjectBuffers(
+      "cube",
       this.cube.positions,
       this.cube.colors,
       this.cube.indices
+    );
+    this.bufferManager.initObjectBuffers(
+      "floor",
+      this.floor.positions,
+      this.floor.colors,
+      this.floor.indices
     );
   }
 
@@ -62,6 +82,7 @@ export class Game {
 
   private update(deltaTime: number) {
     // Будет обновлять состояние игры
+    this.camera.update(deltaTime);
   }
 
   private render() {
@@ -71,12 +92,7 @@ export class Game {
     const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
     mat4.perspective(this.projectionMatrix, fieldOfView, aspect, 0.1, 100.0);
 
-    mat4.identity(this.modelViewMatrix);
-    mat4.translate(
-      this.modelViewMatrix,
-      this.modelViewMatrix,
-      [0.0, 0.0, -6.0]
-    );
+    this.camera.getViewMatrix(this.modelViewMatrix);
 
     if (this.shaderProgram) {
       this.shaderProgram.use();
@@ -93,9 +109,29 @@ export class Game {
       );
       this.gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
 
-      this.bufferManager.bindBuffers(this.shaderProgram);
+      const cubeIndices = this.bufferManager.bindObjectBuffers(
+        "cube",
+        this.shaderProgram
+      );
+      if (cubeIndices)
+        this.gl.drawElements(
+          this.gl.TRIANGLES,
+          cubeIndices,
+          this.gl.UNSIGNED_SHORT,
+          0
+        );
 
-      this.gl.drawElements(this.gl.TRIANGLES, 36, this.gl.UNSIGNED_SHORT, 0);
+      const floorIndices = this.bufferManager.bindObjectBuffers(
+        "floor",
+        this.shaderProgram
+      );
+      if (floorIndices)
+        this.gl.drawElements(
+          this.gl.TRIANGLES,
+          floorIndices,
+          this.gl.UNSIGNED_SHORT,
+          0
+        );
     }
   }
 }
