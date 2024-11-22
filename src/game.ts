@@ -5,6 +5,7 @@ import { BufferManager } from "./core/bufferManager";
 import { ShaderLoader } from "./core/shaderLoader";
 import { Camera } from "./core/camera";
 import { Floor } from "./models/floor";
+import { Weapon } from "./core/weapon";
 
 export class Game {
   private canvas!: HTMLCanvasElement;
@@ -14,6 +15,7 @@ export class Game {
   private bufferManager!: BufferManager;
   private cube!: Cube;
   private floor!: Floor;
+  private weapon!: Weapon;
   private camera!: Camera;
   private projectionMatrix!: mat4;
   private modelViewMatrix!: mat4;
@@ -22,12 +24,21 @@ export class Game {
     this.initGame(canvas);
   }
 
-  private async initGame(canvas: HTMLCanvasElement): Promise<void> {
-    this.canvas = canvas;
+  private addListeners(canvas: HTMLCanvasElement): void {
     canvas.addEventListener("click", () => {
       canvas.requestPointerLock();
     });
 
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 0) {
+        this.weapon.fire();
+      }
+    });
+  }
+
+  private async initGame(canvas: HTMLCanvasElement): Promise<void> {
+    this.canvas = canvas;
+    this.addListeners(canvas);
     this.lastTime = 0;
     this.projectionMatrix = mat4.create();
     this.modelViewMatrix = mat4.create();
@@ -40,6 +51,7 @@ export class Game {
     this.cube = new Cube();
     this.floor = new Floor();
     this.camera = new Camera();
+    this.weapon = new Weapon();
 
     const { vs, fs } = await ShaderLoader.loadShaders();
     this.shaderProgram = new ShaderProgram(this.gl, vs, fs);
@@ -56,6 +68,12 @@ export class Game {
       this.floor.positions,
       this.floor.colors,
       this.floor.indices
+    );
+    this.bufferManager.initObjectBuffers(
+      "weapon",
+      this.weapon.getModel().positions,
+      this.weapon.getModel().colors,
+      this.weapon.getModel().indices
     );
   }
 
@@ -81,8 +99,12 @@ export class Game {
   }
 
   private update(deltaTime: number) {
-    // Будет обновлять состояние игры
     this.camera.update(deltaTime);
+    this.weapon.update(
+      deltaTime,
+      this.camera.getPosition(),
+      this.camera.getRotation()
+    );
   }
 
   private render() {
@@ -132,6 +154,30 @@ export class Game {
           this.gl.UNSIGNED_SHORT,
           0
         );
+
+      const weaponIndices = this.bufferManager.bindObjectBuffers(
+        "weapon",
+        this.shaderProgram
+      );
+      if (weaponIndices) {
+        const weaponViewMatrix = mat4.create();
+        mat4.copy(weaponViewMatrix, this.modelViewMatrix);
+
+        mat4.multiply(
+          weaponViewMatrix,
+          weaponViewMatrix,
+          this.weapon.getModelMatrix()
+        );
+
+        this.gl.uniformMatrix4fv(modelViewLocation, false, weaponViewMatrix);
+
+        this.gl.drawElements(
+          this.gl.TRIANGLES,
+          weaponIndices,
+          this.gl.UNSIGNED_SHORT,
+          0
+        );
+      }
     }
   }
 }

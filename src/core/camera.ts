@@ -102,4 +102,12 @@ export class Camera {
       vec3.negate(vec3.create(), this.position)
     );
   }
+
+  public getPosition(): vec3 {
+    return this.position;
+  }
+
+  public getRotation(): vec3 {
+    return this.rotation;
+  }
 }
