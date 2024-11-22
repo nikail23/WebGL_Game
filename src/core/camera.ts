@@ -24,13 +24,11 @@ export class Camera {
   }
 
   public update(deltaTime: number): void {
-    const dt = deltaTime * 0.001;
-
     if (!this.isGrounded) {
-      this.velocity[1] += this.GRAVITY * dt;
+      this.velocity[1] += this.GRAVITY * deltaTime;
     }
 
-    this.position[1] += this.velocity[1] * dt;
+    this.position[1] += this.velocity[1] * deltaTime;
 
     if (this.position[1] <= this.FLOOR_HEIGHT + this.EYE_HEIGHT) {
       this.position[1] = this.FLOOR_HEIGHT + this.EYE_HEIGHT;
@@ -58,7 +56,11 @@ export class Camera {
 
     if (vec3.length(this.moveDirection) > 0) {
       vec3.normalize(this.moveDirection, this.moveDirection);
-      vec3.scale(this.moveDirection, this.moveDirection, actualSpeed * dt);
+      vec3.scale(
+        this.moveDirection,
+        this.moveDirection,
+        actualSpeed * deltaTime
+      );
       vec3.add(this.position, this.position, this.moveDirection);
     }
   }

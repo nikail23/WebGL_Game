@@ -99,9 +99,10 @@ export class Game {
   }
 
   private update(deltaTime: number) {
-    this.camera.update(deltaTime);
+    const deltaInSeconds = deltaTime * 0.001;
+    this.camera.update(deltaInSeconds);
     this.weapon.update(
-      deltaTime,
+      deltaInSeconds,
       this.camera.getPosition(),
       this.camera.getRotation()
     );
