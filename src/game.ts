@@ -7,8 +7,8 @@ import { Camera } from './core/camera';
 import { Floor } from './models/floor';
 import { Weapon } from './core/weapon';
 import { HUD } from './core/hud/hud';
-import { MuzzleFlash } from './core/hud/muzzle-flash';
 import { Crosshair } from './core/hud/crosshair';
+import { Bullet } from 'core/bullet';
 
 export class Game {
   private canvas!: HTMLCanvasElement;
@@ -56,8 +56,13 @@ export class Game {
     this.floor = new Floor();
     this.camera = new Camera();
     this.weapon = new Weapon({
-      onFire: () => {
-        this.hud.addElement(new MuzzleFlash());
+      onFire: (bullet: Bullet, count: number) => {
+        this.bufferManager.initObjectBuffers(
+          'bullet_' + count,
+          bullet.getModel().positions,
+          bullet.getModel().colors,
+          bullet.getModel().indices
+        );
       },
     });
     this.hud = new HUD();
@@ -172,6 +177,14 @@ export class Game {
         this.weapon.getModelMatrix()
       );
       this.renderObject('weapon', weaponViewMatrix);
+
+      const bulletMatrices = this.weapon.getModelMatrices();
+      bulletMatrices.forEach((bullet, index) => {
+        const bulletViewMatrix = mat4.create();
+        mat4.copy(bulletViewMatrix, this.modelViewMatrix);
+        mat4.multiply(bulletViewMatrix, bulletViewMatrix, bullet.bulletMatrix);
+        this.renderObject(`bullet_${index + 1}`, bulletViewMatrix);
+      });
 
       this.hud.draw();
     }

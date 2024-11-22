@@ -23,7 +23,9 @@ export class Weapon {
 
   private bullets: Bullet[] = [];
 
-  public constructor(private callbacks: { onFire: () => void }) {
+  public constructor(
+    private callbacks: { onFire: (bullet: Bullet, count: number) => void }
+  ) {
     this.model = new WeaponModel();
     this.modelMatrix = mat4.create();
   }
@@ -88,14 +90,23 @@ export class Weapon {
       const bulletDir = vec3.fromValues(0, 0, -1);
       vec3.rotateY(bulletDir, bulletDir, [0, 0, 0], -this.rotation[1]);
       vec3.rotateX(bulletDir, bulletDir, [0, 0, 0], -this.rotation[0]);
-      this.bullets.push(new Bullet(bulletPos, bulletDir));
 
-      if (this.callbacks?.onFire) this.callbacks.onFire();
+      const bullet = new Bullet(bulletPos, bulletDir);
+      this.bullets.push(bullet);
+      if (this.callbacks?.onFire)
+        this.callbacks.onFire(bullet, this.bullets.length);
     }
   }
 
   public getModelMatrix(): mat4 {
     return this.modelMatrix;
+  }
+
+  public getModelMatrices(): { bulletMatrix: mat4; count: number }[] {
+    return this.bullets.map((bullet) => ({
+      bulletMatrix: bullet.getModelMatrix(),
+      count: bullet.getModel().indices.length,
+    }));
   }
 
   public getModel(): WeaponModel {
