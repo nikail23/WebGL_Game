@@ -1,5 +1,5 @@
 export class WeaponModel {
-  readonly positions: number[] = [
+  public readonly positions: number[] = [
     // Basic gun shape
     // Left side
     -0.1, -0.1, -0.3, -0.1, 0.1, -0.3, -0.1, 0.1, 0.3, -0.1, -0.1, 0.3,
@@ -7,14 +7,14 @@ export class WeaponModel {
     0.1, -0.1, -0.3, 0.1, 0.1, -0.3, 0.1, 0.1, 0.3, 0.1, -0.1, 0.3,
   ];
 
-  readonly colors: number[] = [
+  public readonly colors: number[] = [
     // Dark grey color
     0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2,
     1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3,
     0.3, 1.0,
   ];
 
-  readonly indices: number[] = [
+  public readonly indices: number[] = [
     // Front
     0, 1, 2, 0, 2, 3,
     // Back

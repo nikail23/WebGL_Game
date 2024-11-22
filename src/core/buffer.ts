@@ -2,7 +2,7 @@ export class Buffer {
   private gl: WebGLRenderingContext;
   private buffer: WebGLBuffer | null;
 
-  constructor(gl: WebGLRenderingContext) {
+  public constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
     this.buffer = gl.createBuffer();
   }

@@ -1,4 +1,4 @@
-import { mat4, vec3 } from "gl-matrix";
+import { mat4, vec3 } from 'gl-matrix';
 
 export class Camera {
   private position: vec3 = vec3.fromValues(0, 2, 6);
@@ -19,7 +19,7 @@ export class Camera {
   private moveDirection: vec3 = vec3.create();
   private keys: Set<string> = new Set();
 
-  constructor() {
+  public constructor() {
     this.setupControls();
   }
 
@@ -45,13 +45,13 @@ export class Camera {
     vec3.rotateY(right, right, [0, 0, 0], -this.rotation[1]);
 
     vec3.zero(this.moveDirection);
-    if (this.keys.has("KeyW"))
+    if (this.keys.has('KeyW'))
       vec3.add(this.moveDirection, this.moveDirection, forward);
-    if (this.keys.has("KeyS"))
+    if (this.keys.has('KeyS'))
       vec3.subtract(this.moveDirection, this.moveDirection, forward);
-    if (this.keys.has("KeyD"))
+    if (this.keys.has('KeyD'))
       vec3.add(this.moveDirection, this.moveDirection, right);
-    if (this.keys.has("KeyA"))
+    if (this.keys.has('KeyA'))
       vec3.subtract(this.moveDirection, this.moveDirection, right);
 
     if (vec3.length(this.moveDirection) > 0) {
@@ -66,21 +66,21 @@ export class Camera {
   }
 
   private setupControls(): void {
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
-      if (e.code === "Space" && this.isGrounded) {
+      if (e.code === 'Space' && this.isGrounded) {
         this.velocity[1] = this.JUMP_FORCE;
         this.isGrounded = false;
       }
-      if (e.code === "ShiftLeft") this.isSprinting = true;
+      if (e.code === 'ShiftLeft') this.isSprinting = true;
     });
 
-    document.addEventListener("keyup", (e) => {
+    document.addEventListener('keyup', (e) => {
       this.keys.delete(e.code);
-      if (e.code === "ShiftLeft") this.isSprinting = false;
+      if (e.code === 'ShiftLeft') this.isSprinting = false;
     });
 
-    document.addEventListener("mousemove", (e) => {
+    document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement) {
         this.rotation[1] += e.movementX * this.MOUSE_SENSITIVITY;
         this.rotation[0] = Math.max(

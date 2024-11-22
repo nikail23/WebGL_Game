@@ -1,15 +1,19 @@
 export class ShaderProgram {
   private gl: WebGLRenderingContext;
-  program: WebGLProgram | null = null;
+  private program: WebGLProgram | null = null;
 
   public get WebGlProgram(): WebGLProgram {
     if (!this.program) {
-      throw new Error("ShaderProgram is not initialized");
+      throw new Error('ShaderProgram is not initialized');
     }
     return this.program;
   }
 
-  constructor(gl: WebGLRenderingContext, vsSource: string, fsSource: string) {
+  public constructor(
+    gl: WebGLRenderingContext,
+    vsSource: string,
+    fsSource: string
+  ) {
     this.gl = gl;
     this.program = this.createProgram(vsSource, fsSource);
   }
@@ -34,14 +38,14 @@ export class ShaderProgram {
     );
 
     const shaderProgram = this.gl.createProgram();
-    if (!shaderProgram) throw new Error("Failed to create shader program");
+    if (!shaderProgram) throw new Error('Failed to create shader program');
 
     this.gl.attachShader(shaderProgram, vertexShader);
     this.gl.attachShader(shaderProgram, fragmentShader);
     this.gl.linkProgram(shaderProgram);
 
     if (!this.gl.getProgramParameter(shaderProgram, this.gl.LINK_STATUS)) {
-      throw new Error("Unable to initialize shader program");
+      throw new Error('Unable to initialize shader program');
     }
 
     return shaderProgram;
@@ -49,7 +53,7 @@ export class ShaderProgram {
 
   private compileShader(type: number, source: string): WebGLShader {
     const shader = this.gl.createShader(type);
-    if (!shader) throw new Error("Failed to create shader");
+    if (!shader) throw new Error('Failed to create shader');
 
     this.gl.shaderSource(shader, source);
     this.gl.compileShader(shader);
@@ -57,7 +61,7 @@ export class ShaderProgram {
     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
       const info = this.gl.getShaderInfoLog(shader);
       this.gl.deleteShader(shader);
-      throw new Error("Shader compilation error: " + info);
+      throw new Error('Shader compilation error: ' + info);
     }
 
     return shader;

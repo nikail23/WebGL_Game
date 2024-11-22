@@ -1,11 +1,11 @@
-import { mat4 } from "gl-matrix";
-import { ShaderProgram } from "./core/shader";
-import { Cube } from "./models/cube";
-import { BufferManager } from "./core/bufferManager";
-import { ShaderLoader } from "./core/shaderLoader";
-import { Camera } from "./core/camera";
-import { Floor } from "./models/floor";
-import { Weapon } from "./core/weapon";
+import { mat4 } from 'gl-matrix';
+import { ShaderProgram } from './core/shader';
+import { Cube } from './models/cube';
+import { BufferManager } from './core/bufferManager';
+import { ShaderLoader } from './core/shaderLoader';
+import { Camera } from './core/camera';
+import { Floor } from './models/floor';
+import { Weapon } from './core/weapon';
 
 export class Game {
   private canvas!: HTMLCanvasElement;
@@ -20,16 +20,16 @@ export class Game {
   private projectionMatrix!: mat4;
   private modelViewMatrix!: mat4;
 
-  constructor(canvas: HTMLCanvasElement) {
+  public constructor(canvas: HTMLCanvasElement) {
     this.initGame(canvas);
   }
 
   private addListeners(canvas: HTMLCanvasElement): void {
-    canvas.addEventListener("click", () => {
+    canvas.addEventListener('click', () => {
       canvas.requestPointerLock();
     });
 
-    canvas.addEventListener("mousedown", (e) => {
+    canvas.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
         this.weapon.fire();
       }
@@ -43,9 +43,9 @@ export class Game {
     this.projectionMatrix = mat4.create();
     this.modelViewMatrix = mat4.create();
 
-    this.gl = canvas.getContext("webgl") as WebGLRenderingContext;
+    this.gl = canvas.getContext('webgl') as WebGLRenderingContext;
     if (!this.gl) {
-      throw new Error("WebGL not supported");
+      throw new Error('WebGL not supported');
     }
 
     this.cube = new Cube();
@@ -58,37 +58,37 @@ export class Game {
     this.initWebGL();
     this.bufferManager = new BufferManager(this.gl);
     this.bufferManager.initObjectBuffers(
-      "cube",
+      'cube',
       this.cube.positions,
       this.cube.colors,
       this.cube.indices
     );
     this.bufferManager.initObjectBuffers(
-      "floor",
+      'floor',
       this.floor.positions,
       this.floor.colors,
       this.floor.indices
     );
     this.bufferManager.initObjectBuffers(
-      "weapon",
+      'weapon',
       this.weapon.getModel().positions,
       this.weapon.getModel().colors,
       this.weapon.getModel().indices
     );
   }
 
-  private initWebGL() {
+  private initWebGL(): void {
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
     this.gl.enable(this.gl.DEPTH_TEST);
     this.gl.depthFunc(this.gl.LEQUAL);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   }
 
-  start() {
+  public start(): void {
     requestAnimationFrame(this.gameLoop.bind(this));
   }
 
-  private gameLoop(timestamp: number) {
+  private gameLoop(timestamp: number): void {
     const deltaTime = timestamp - this.lastTime;
     this.lastTime = timestamp;
 
@@ -98,7 +98,7 @@ export class Game {
     requestAnimationFrame(this.gameLoop.bind(this));
   }
 
-  private update(deltaTime: number) {
+  private update(deltaTime: number): void {
     const deltaInSeconds = deltaTime * 0.001;
     this.camera.update(deltaInSeconds);
     this.weapon.update(
@@ -108,7 +108,7 @@ export class Game {
     );
   }
 
-  private render() {
+  private render(): void {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
     const fieldOfView = (45 * Math.PI) / 180;
@@ -121,9 +121,9 @@ export class Game {
       this.shaderProgram.use();
 
       const projectionLocation =
-        this.shaderProgram.getUniformLocation("uProjectionMatrix");
+        this.shaderProgram.getUniformLocation('uProjectionMatrix');
       const modelViewLocation =
-        this.shaderProgram.getUniformLocation("uModelViewMatrix");
+        this.shaderProgram.getUniformLocation('uModelViewMatrix');
 
       this.gl.uniformMatrix4fv(
         projectionLocation,
@@ -133,7 +133,7 @@ export class Game {
       this.gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
 
       const cubeIndices = this.bufferManager.bindObjectBuffers(
-        "cube",
+        'cube',
         this.shaderProgram
       );
       if (cubeIndices)
@@ -145,7 +145,7 @@ export class Game {
         );
 
       const floorIndices = this.bufferManager.bindObjectBuffers(
-        "floor",
+        'floor',
         this.shaderProgram
       );
       if (floorIndices)
@@ -157,7 +157,7 @@ export class Game {
         );
 
       const weaponIndices = this.bufferManager.bindObjectBuffers(
-        "weapon",
+        'weapon',
         this.shaderProgram
       );
       if (weaponIndices) {

@@ -1,5 +1,5 @@
-import { mat4, vec3 } from "gl-matrix";
-import { WeaponModel } from "../models/weapon";
+import { mat4, vec3 } from 'gl-matrix';
+import { WeaponModel } from '../models/weapon';
 
 export class Weapon {
   private readonly RECOIL_OFFSET = vec3.fromValues(0, 0.02, 0.1);
@@ -18,7 +18,7 @@ export class Weapon {
   private animationOffset: vec3 = vec3.create();
   private animationRotation: number = 0;
 
-  constructor() {
+  public constructor() {
     this.model = new WeaponModel();
     this.modelMatrix = mat4.create();
   }
@@ -71,7 +71,7 @@ export class Weapon {
       this.lastFireTime = now;
       this.isRecoiling = true;
       this.recoilTime = 0;
-      console.log("Weapon fired!");
+      console.log('Weapon fired!');
     }
   }
 

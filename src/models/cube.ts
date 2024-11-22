@@ -1,6 +1,6 @@
 export class Cube {
   // Вершины куба
-  positions: number[] = [
+  public positions: number[] = [
     // Front face
     -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
     // Back face
@@ -16,7 +16,7 @@ export class Cube {
   ];
 
   // Цвета для каждой вершины
-  readonly colors: number[] = [
+  public readonly colors: number[] = [
     // Front face: white
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     1.0,
@@ -38,7 +38,7 @@ export class Cube {
   ];
 
   // Индексы для рендеринга граней
-  readonly indices: number[] = [
+  public readonly indices: number[] = [
     0,
     1,
     2,
@@ -77,7 +77,7 @@ export class Cube {
     23, // left
   ];
 
-  constructor() {
+  public constructor() {
     this.positions = this.positions.map(
       (v, i) => (i % 3 === 1 ? v + 1 : v) // Добавляем 1 к Y-координатам
     );

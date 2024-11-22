@@ -1,4 +1,4 @@
-import { ShaderProgram } from "./shader";
+import { ShaderProgram } from './shader';
 
 export class BufferManager {
   private gl: WebGLRenderingContext;
@@ -12,7 +12,7 @@ export class BufferManager {
     }
   > = new Map();
 
-  constructor(gl: WebGLRenderingContext) {
+  public constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
   }
 
@@ -21,7 +21,7 @@ export class BufferManager {
     positions: number[],
     colors: number[],
     indices: number[]
-  ) {
+  ): void {
     const positionBuffer = this.gl.createBuffer();
     const colorBuffer = this.gl.createBuffer();
     const indexBuffer = this.gl.createBuffer();
@@ -55,12 +55,12 @@ export class BufferManager {
     });
   }
 
-  public bindObjectBuffers(name: string, shaderProgram: ShaderProgram) {
+  public bindObjectBuffers(name: string, shaderProgram: ShaderProgram): number {
     const buffers = this.objectBuffers.get(name);
-    if (!buffers) return;
+    if (!buffers) throw new Error(`Object buffers with name ${name} not found`);
 
-    const positionLocation = shaderProgram.getAttribLocation("aVertexPosition");
-    const colorLocation = shaderProgram.getAttribLocation("aVertexColor");
+    const positionLocation = shaderProgram.getAttribLocation('aVertexPosition');
+    const colorLocation = shaderProgram.getAttribLocation('aVertexColor');
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.position);
     this.gl.vertexAttribPointer(
