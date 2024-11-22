@@ -1,5 +1,6 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { WeaponModel } from '../models/weapon';
+import { Bullet } from './bullet';
 
 export class Weapon {
   private readonly RECOIL_OFFSET = vec3.fromValues(0, 0.02, 0.1);
@@ -9,6 +10,8 @@ export class Weapon {
   private readonly FIRE_RATE = 0.1;
   private readonly WEAPON_OFFSET = vec3.fromValues(0.2, -0.15, -0.5);
 
+  private position: vec3 = vec3.create();
+  private rotation: vec3 = vec3.create();
   private lastFireTime: number = 0;
   private model: WeaponModel;
   private modelMatrix: mat4;
@@ -18,7 +21,9 @@ export class Weapon {
   private animationOffset: vec3 = vec3.create();
   private animationRotation: number = 0;
 
-  public constructor() {
+  private bullets: Bullet[] = [];
+
+  public constructor(private callbacks: { onFire: () => void }) {
     this.model = new WeaponModel();
     this.modelMatrix = mat4.create();
   }
@@ -28,6 +33,9 @@ export class Weapon {
     cameraPosition: vec3,
     cameraRotation: vec3
   ): void {
+    vec3.copy(this.position, cameraPosition);
+    vec3.copy(this.rotation, cameraRotation);
+
     if (this.isRecoiling) {
       this.recoilTime += deltaTime;
       this.recoilProgress = Math.min(this.recoilTime / this.RECOIL_DURATION, 1);
@@ -51,6 +59,9 @@ export class Weapon {
       );
     }
 
+    // Update bullets
+    this.bullets = this.bullets.filter((bullet) => bullet.update(deltaTime));
+
     mat4.identity(this.modelMatrix);
     mat4.translate(this.modelMatrix, this.modelMatrix, cameraPosition);
     mat4.rotateY(this.modelMatrix, this.modelMatrix, -cameraRotation[1]);
@@ -66,12 +77,20 @@ export class Weapon {
   }
 
   public fire(): void {
-    const now = performance.now() * 0.001;
-    if (now - this.lastFireTime >= this.FIRE_RATE) {
-      this.lastFireTime = now;
+    if (performance.now() * 0.001 - this.lastFireTime >= this.FIRE_RATE) {
+      this.lastFireTime = performance.now() * 0.001;
       this.isRecoiling = true;
       this.recoilTime = 0;
-      console.log('Weapon fired!');
+
+      // Create bullet
+      const bulletPos = vec3.create();
+      vec3.add(bulletPos, this.position, this.WEAPON_OFFSET);
+      const bulletDir = vec3.fromValues(0, 0, -1);
+      vec3.rotateY(bulletDir, bulletDir, [0, 0, 0], -this.rotation[1]);
+      vec3.rotateX(bulletDir, bulletDir, [0, 0, 0], -this.rotation[0]);
+      this.bullets.push(new Bullet(bulletPos, bulletDir));
+
+      if (this.callbacks?.onFire) this.callbacks.onFire();
     }
   }
 

@@ -6,6 +6,9 @@ import { ShaderLoader } from './core/shaderLoader';
 import { Camera } from './core/camera';
 import { Floor } from './models/floor';
 import { Weapon } from './core/weapon';
+import { HUD } from './core/hud/hud';
+import { MuzzleFlash } from './core/hud/muzzle-flash';
+import { Crosshair } from './core/hud/crosshair';
 
 export class Game {
   private canvas!: HTMLCanvasElement;
@@ -17,6 +20,7 @@ export class Game {
   private floor!: Floor;
   private weapon!: Weapon;
   private camera!: Camera;
+  private hud!: HUD;
   private projectionMatrix!: mat4;
   private modelViewMatrix!: mat4;
 
@@ -51,7 +55,13 @@ export class Game {
     this.cube = new Cube();
     this.floor = new Floor();
     this.camera = new Camera();
-    this.weapon = new Weapon();
+    this.weapon = new Weapon({
+      onFire: () => {
+        this.hud.addElement(new MuzzleFlash());
+      },
+    });
+    this.hud = new HUD();
+    this.hud.addElement(new Crosshair());
 
     const { vs, fs } = await ShaderLoader.loadShaders();
     this.shaderProgram = new ShaderProgram(this.gl, vs, fs);
@@ -106,6 +116,7 @@ export class Game {
       this.camera.getPosition(),
       this.camera.getRotation()
     );
+    this.hud.update(deltaInSeconds);
   }
 
   private setupMatrices(): void {
@@ -141,17 +152,6 @@ export class Game {
     this.gl.drawElements(this.gl.TRIANGLES, indices, this.gl.UNSIGNED_SHORT, 0);
   }
 
-  private renderWeapon(): void {
-    const weaponViewMatrix = mat4.create();
-    mat4.copy(weaponViewMatrix, this.modelViewMatrix);
-    mat4.multiply(
-      weaponViewMatrix,
-      weaponViewMatrix,
-      this.weapon.getModelMatrix()
-    );
-    this.renderObject('weapon', weaponViewMatrix);
-  }
-
   private render(): void {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
@@ -163,7 +163,17 @@ export class Game {
 
       this.renderObject('cube');
       this.renderObject('floor');
-      this.renderWeapon();
+
+      const weaponViewMatrix = mat4.create();
+      mat4.copy(weaponViewMatrix, this.modelViewMatrix);
+      mat4.multiply(
+        weaponViewMatrix,
+        weaponViewMatrix,
+        this.weapon.getModelMatrix()
+      );
+      this.renderObject('weapon', weaponViewMatrix);
+
+      this.hud.draw();
     }
   }
 }

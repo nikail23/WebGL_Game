@@ -19,7 +19,13 @@ export default [
       prettier: prettier,
     },
     rules: {
-      '@typescript-eslint/explicit-function-return-type': 'error',
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        {
+          allowTypedFunctionExpressions: true,
+          allowExpressions: true,
+        },
+      ],
       '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/no-use-before-define': 'error',
       '@typescript-eslint/no-empty-function': 'error',
