@@ -108,77 +108,62 @@ export class Game {
     );
   }
 
-  private render(): void {
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
+  private setupMatrices(): void {
     const fieldOfView = (45 * Math.PI) / 180;
     const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
     mat4.perspective(this.projectionMatrix, fieldOfView, aspect, 0.1, 100.0);
-
     this.camera.getViewMatrix(this.modelViewMatrix);
+  }
+
+  private setupShaderMatrices(): void {
+    const projectionLocation =
+      this.shaderProgram.getUniformLocation('uProjectionMatrix');
+    const modelViewLocation =
+      this.shaderProgram.getUniformLocation('uModelViewMatrix');
+
+    this.gl.uniformMatrix4fv(projectionLocation, false, this.projectionMatrix);
+    this.gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
+  }
+
+  private renderObject(name: string, modelMatrix?: mat4): void {
+    const indices = this.bufferManager.bindObjectBuffers(
+      name,
+      this.shaderProgram
+    );
+    if (!indices) return;
+
+    if (modelMatrix) {
+      const modelViewLocation =
+        this.shaderProgram.getUniformLocation('uModelViewMatrix');
+      this.gl.uniformMatrix4fv(modelViewLocation, false, modelMatrix);
+    }
+
+    this.gl.drawElements(this.gl.TRIANGLES, indices, this.gl.UNSIGNED_SHORT, 0);
+  }
+
+  private renderWeapon(): void {
+    const weaponViewMatrix = mat4.create();
+    mat4.copy(weaponViewMatrix, this.modelViewMatrix);
+    mat4.multiply(
+      weaponViewMatrix,
+      weaponViewMatrix,
+      this.weapon.getModelMatrix()
+    );
+    this.renderObject('weapon', weaponViewMatrix);
+  }
+
+  private render(): void {
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+
+    this.setupMatrices();
 
     if (this.shaderProgram) {
       this.shaderProgram.use();
+      this.setupShaderMatrices();
 
-      const projectionLocation =
-        this.shaderProgram.getUniformLocation('uProjectionMatrix');
-      const modelViewLocation =
-        this.shaderProgram.getUniformLocation('uModelViewMatrix');
-
-      this.gl.uniformMatrix4fv(
-        projectionLocation,
-        false,
-        this.projectionMatrix
-      );
-      this.gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
-
-      const cubeIndices = this.bufferManager.bindObjectBuffers(
-        'cube',
-        this.shaderProgram
-      );
-      if (cubeIndices)
-        this.gl.drawElements(
-          this.gl.TRIANGLES,
-          cubeIndices,
-          this.gl.UNSIGNED_SHORT,
-          0
-        );
-
-      const floorIndices = this.bufferManager.bindObjectBuffers(
-        'floor',
-        this.shaderProgram
-      );
-      if (floorIndices)
-        this.gl.drawElements(
-          this.gl.TRIANGLES,
-          floorIndices,
-          this.gl.UNSIGNED_SHORT,
-          0
-        );
-
-      const weaponIndices = this.bufferManager.bindObjectBuffers(
-        'weapon',
-        this.shaderProgram
-      );
-      if (weaponIndices) {
-        const weaponViewMatrix = mat4.create();
-        mat4.copy(weaponViewMatrix, this.modelViewMatrix);
-
-        mat4.multiply(
-          weaponViewMatrix,
-          weaponViewMatrix,
-          this.weapon.getModelMatrix()
-        );
-
-        this.gl.uniformMatrix4fv(modelViewLocation, false, weaponViewMatrix);
-
-        this.gl.drawElements(
-          this.gl.TRIANGLES,
-          weaponIndices,
-          this.gl.UNSIGNED_SHORT,
-          0
-        );
-      }
+      this.renderObject('cube');
+      this.renderObject('floor');
+      this.renderWeapon();
     }
   }
 }
