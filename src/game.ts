@@ -8,7 +8,7 @@ import { Floor } from './models/floor';
 import { Weapon } from './core/weapon';
 import { HUD } from './core/hud/hud';
 import { Crosshair } from './core/hud/crosshair';
-import { Bullet } from 'core/bullet';
+import { Bullet } from './core/bullet';
 
 export class Game {
   private canvas!: HTMLCanvasElement;

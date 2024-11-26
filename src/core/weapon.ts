@@ -1,6 +1,7 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { WeaponModel } from '../models/weapon';
 import { Bullet } from './bullet';
+import { getRotationQuaternion } from './math/quat-rotation';
 
 export class Weapon {
   private readonly RECOIL_OFFSET = vec3.fromValues(0, 0.02, 0.1);
@@ -84,12 +85,15 @@ export class Weapon {
       this.isRecoiling = true;
       this.recoilTime = 0;
 
-      // Create bullet
       const bulletPos = vec3.create();
-      vec3.add(bulletPos, this.position, this.WEAPON_OFFSET);
+      vec3.copy(bulletPos, this.position);
+
       const bulletDir = vec3.fromValues(0, 0, -1);
-      vec3.rotateY(bulletDir, bulletDir, [0, 0, 0], -this.rotation[1]);
-      vec3.rotateX(bulletDir, bulletDir, [0, 0, 0], -this.rotation[0]);
+      vec3.transformQuat(
+        bulletDir,
+        bulletDir,
+        getRotationQuaternion(this.rotation)
+      );
 
       const bullet = new Bullet(bulletPos, bulletDir);
       this.bullets.push(bullet);
