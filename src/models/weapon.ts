@@ -1,20 +1,23 @@
-export class WeaponModel {
-  public readonly positions: number[] = [
-    // Basic gun shape
-    // Left side
-    -0.1, -0.1, -0.3, -0.1, 0.1, -0.3, -0.1, 0.1, 0.3, -0.1, -0.1, 0.3,
-    // Right side
-    0.1, -0.1, -0.3, 0.1, 0.1, -0.3, 0.1, 0.1, 0.3, 0.1, -0.1, 0.3,
-  ];
+import { Object3DModelData } from '../core/object-model-data';
 
-  public readonly colors: number[] = [
+const positions = [
+  // Basic gun shape
+  // Left side
+  -0.1, -0.1, -0.3, -0.1, 0.1, -0.3, -0.1, 0.1, 0.3, -0.1, -0.1, 0.3,
+  // Right side
+  0.1, -0.1, -0.3, 0.1, 0.1, -0.3, 0.1, 0.1, 0.3, 0.1, -0.1, 0.3,
+];
+
+export const weapon: Object3DModelData = {
+  positions,
+  colors: [
     // Dark grey color
     0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2,
     1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3, 0.3, 1.0, 0.3, 0.3,
     0.3, 1.0,
-  ];
-
-  public readonly indices: number[] = [
+  ],
+  uv: new Array((positions.length / 3) * 2).fill(0.0),
+  indices: [
     // Front
     0, 1, 2, 0, 2, 3,
     // Back
@@ -27,5 +30,5 @@ export class WeaponModel {
     3, 2, 6, 3, 6, 7,
     // Left
     0, 1, 5, 0, 5, 4,
-  ];
-}
+  ],
+};

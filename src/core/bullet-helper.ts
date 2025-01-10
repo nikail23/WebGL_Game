@@ -1,8 +1,8 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { BulletModel } from '../models/bullet';
+import { Object3D } from 'core/object';
 
-export class Bullet {
-  private model: BulletModel;
+export class BulletHelper {
+  private object: Object3D;
   private modelMatrix: mat4;
   private position: vec3;
   private direction: vec3;
@@ -10,8 +10,8 @@ export class Bullet {
   private readonly LIFETIME = 2.0;
   private time = 0;
 
-  public constructor(position: vec3, direction: vec3) {
-    this.model = new BulletModel();
+  public constructor(object: Object3D, position: vec3, direction: vec3) {
+    this.object = object;
     this.position = vec3.clone(position);
     this.direction = vec3.normalize(vec3.create(), direction);
     this.modelMatrix = mat4.create();
@@ -33,15 +33,10 @@ export class Bullet {
     return true;
   }
 
-  public getPosition(): vec3 {
-    return this.position;
-  }
-
-  public getModelMatrix(): mat4 {
-    return this.modelMatrix;
-  }
-
-  public getModel(): BulletModel {
-    return this.model;
+  public render(viewMatrix: mat4): void {
+    const bulletViewMatrix = mat4.create();
+    mat4.copy(bulletViewMatrix, viewMatrix);
+    mat4.multiply(bulletViewMatrix, bulletViewMatrix, this.modelMatrix);
+    this.object.render(bulletViewMatrix);
   }
 }

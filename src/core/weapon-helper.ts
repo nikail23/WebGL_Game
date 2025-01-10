@@ -1,9 +1,10 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { WeaponModel } from '../models/weapon';
-import { Bullet } from './bullet';
+import { BulletHelper } from './bullet-helper';
 import { getRotationQuaternion } from './math/quat-rotation';
+import { Object3D } from 'core/object';
+import { Object3DFabric } from 'core/object-fabric';
 
-export class Weapon {
+export class WeaponHelper {
   private readonly RECOIL_OFFSET = vec3.fromValues(0, 0.02, 0.1);
   private readonly RECOIL_ROTATION = 0.15;
   private readonly RECOIL_DURATION = 0.3;
@@ -14,7 +15,6 @@ export class Weapon {
   private position: vec3 = vec3.create();
   private rotation: vec3 = vec3.create();
   private lastFireTime: number = 0;
-  private model: WeaponModel;
   private modelMatrix: mat4;
   private isRecoiling: boolean = false;
   private recoilTime: number = 0;
@@ -22,12 +22,12 @@ export class Weapon {
   private animationOffset: vec3 = vec3.create();
   private animationRotation: number = 0;
 
-  private bullets: Bullet[] = [];
+  private bullets: BulletHelper[] = [];
 
   public constructor(
-    private callbacks: { onFire: (bullet: Bullet, count: number) => void }
+    private weaponObject: Object3D,
+    private object3DFabric: Object3DFabric
   ) {
-    this.model = new WeaponModel();
     this.modelMatrix = mat4.create();
   }
 
@@ -79,7 +79,7 @@ export class Weapon {
     mat4.translate(this.modelMatrix, this.modelMatrix, totalOffset);
   }
 
-  public fire(): void {
+  public async fire(): Promise<void> {
     if (performance.now() * 0.001 - this.lastFireTime >= this.FIRE_RATE) {
       this.lastFireTime = performance.now() * 0.001;
       this.isRecoiling = true;
@@ -95,10 +95,12 @@ export class Weapon {
         getRotationQuaternion(this.rotation)
       );
 
-      const bullet = new Bullet(bulletPos, bulletDir);
-      this.bullets.push(bullet);
-      if (this.callbacks?.onFire)
-        this.callbacks.onFire(bullet, this.bullets.length);
+      const object = await this.object3DFabric.createObject(
+        'bullet_' + this.bullets.length,
+        'bullet'
+      );
+
+      this.bullets.push(new BulletHelper(object, bulletPos, bulletDir));
     }
   }
 
@@ -106,14 +108,15 @@ export class Weapon {
     return this.modelMatrix;
   }
 
-  public getModelMatrices(): { bulletMatrix: mat4; count: number }[] {
-    return this.bullets.map((bullet) => ({
-      bulletMatrix: bullet.getModelMatrix(),
-      count: bullet.getModel().indices.length,
-    }));
-  }
+  public async render(viewMatrix: mat4): Promise<void> {
+    const weaponViewMatrix = mat4.create();
+    mat4.copy(weaponViewMatrix, viewMatrix);
+    mat4.multiply(weaponViewMatrix, weaponViewMatrix, this.modelMatrix);
 
-  public getModel(): WeaponModel {
-    return this.model;
+    await this.weaponObject.render(weaponViewMatrix);
+
+    for (const bullet of this.bullets) {
+      await bullet.render(viewMatrix);
+    }
   }
 }

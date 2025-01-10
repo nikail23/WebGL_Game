@@ -1,33 +1,36 @@
-export class BulletModel {
-  public readonly positions: number[] = [
-    // Упрощенная сфера (8 вершин)
-    0.0,
-    0.1,
-    0.0, // верх
-    0.1,
-    0.0,
-    0.0, // право
-    0.0,
-    0.0,
-    0.1, // перед
-    -0.1,
-    0.0,
-    0.0, // лево
-    0.0,
-    0.0,
-    -0.1, // зад
-    0.0,
-    -0.1,
-    0.0, // низ
-  ];
+import { Object3DModelData } from 'core/object-model-data';
 
-  public readonly colors: number[] = [
+const positions = [
+  // Упрощенная сфера (8 вершин)
+  0.0,
+  0.1,
+  0.0, // верх
+  0.1,
+  0.0,
+  0.0, // право
+  0.0,
+  0.0,
+  0.1, // перед
+  -0.1,
+  0.0,
+  0.0, // лево
+  0.0,
+  0.0,
+  -0.1, // зад
+  0.0,
+  -0.1,
+  0.0, // низ
+];
+
+export const bullet: Object3DModelData = {
+  positions,
+  colors: [
     // Желтый цвет для всех вершин
     1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0,
     1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0,
-  ];
-
-  public readonly indices: number[] = [
+  ],
+  uv: new Array((positions.length / 3) * 2).fill(0.0),
+  indices: [
     0,
     1,
     2,
@@ -52,5 +55,5 @@ export class BulletModel {
     5,
     1,
     4,
-  ];
-}
+  ],
+};

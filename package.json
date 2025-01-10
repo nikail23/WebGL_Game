@@ -22,7 +22,8 @@
     "webpack-cli": "^4.0.0"
   },
   "dependencies": {
-    "gl-matrix": "^3.4.3"
+    "gl-matrix": "^3.4.3",
+    "spectorjs": "^0.9.30"
   },
   "type": "module"
 }
