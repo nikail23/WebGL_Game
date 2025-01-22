@@ -13,6 +13,10 @@ export default {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+      {
+        test: /\.obj$/,
+        loader: 'webpack-obj-loader',
+      },
     ],
   },
   resolve: {

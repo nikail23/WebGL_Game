@@ -1,8 +1,7 @@
 import { Object3DModel } from './object-model';
 import { ShaderProgram } from './shader';
-import { Object3DModelData } from './object-model-data';
 import { Object3D } from './object';
-import { mat4 } from 'gl-matrix';
+import { mat4, vec4 } from 'gl-matrix';
 
 export class Object3DFabric {
   private _gl: WebGLRenderingContext;
@@ -15,13 +14,21 @@ export class Object3DFabric {
     this._shaderProgram = shaderProgram;
   }
 
-  public createModel(modelData: Object3DModelData, modelName: string): void {
-    const model = new Object3DModel(modelData, this._gl, this._shaderProgram);
-    this._models[modelName] = model;
-  }
+  public async createModel(
+    url: string,
+    defaultColor: vec4,
+    modelName: string
+  ): Promise<void> {
+    const model = new Object3DModel(
+      url,
+      defaultColor,
+      this._gl,
+      this._shaderProgram
+    );
 
-  public getModel(modelName: string): Object3DModel {
-    return this._models[modelName];
+    await model.load();
+
+    this._models[modelName] = model;
   }
 
   public createObject(name: string, modelName: string): Object3D {
@@ -32,7 +39,9 @@ export class Object3DFabric {
     }
 
     const object = new Object3D(model, this._gl, this._shaderProgram);
+
     this._objects[name] = object;
+
     return object;
   }
 

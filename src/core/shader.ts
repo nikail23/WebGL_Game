@@ -1,6 +1,6 @@
 export class ShaderProgram {
   private gl: WebGLRenderingContext;
-  private program: WebGLProgram | null = null;
+  private program: WebGLProgram;
 
   public get WebGlProgram(): WebGLProgram {
     if (!this.program) {

@@ -24,22 +24,22 @@ export class Object3D {
   }
 
   public async render(viewMatrix: mat4): Promise<void> {
-    this._model.bindBuffers();
+    const result = await this._model.prepareToRender();
 
-    await this._model.bindTexture();
+    if (result) {
+      const modelViewMatrix = mat4.create();
+      mat4.multiply(modelViewMatrix, viewMatrix, this._modelMatrix);
 
-    const modelViewMatrix = mat4.create();
-    mat4.multiply(modelViewMatrix, viewMatrix, this._modelMatrix);
+      const modelViewLocation =
+        this._shaderProgram.getUniformLocation('uModelViewMatrix');
+      this._gl.uniformMatrix4fv(modelViewLocation, false, modelViewMatrix);
 
-    const modelViewLocation =
-      this._shaderProgram.getUniformLocation('uModelViewMatrix');
-    this._gl.uniformMatrix4fv(modelViewLocation, false, modelViewMatrix);
-
-    this._gl.drawElements(
-      this._gl.TRIANGLES,
-      this._model.indices,
-      this._gl.UNSIGNED_SHORT,
-      0
-    );
+      this._gl.drawElements(
+        this._gl.TRIANGLES,
+        this._model.indices,
+        this._gl.UNSIGNED_SHORT,
+        0
+      );
+    }
   }
 }
