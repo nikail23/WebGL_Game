@@ -1,5 +1,6 @@
+import { gl } from '../gl';
+
 export class ShaderProgram {
-  private gl: WebGLRenderingContext;
   private program: WebGLProgram;
 
   public get WebGlProgram(): WebGLProgram {
@@ -9,42 +10,34 @@ export class ShaderProgram {
     return this.program;
   }
 
-  public constructor(
-    gl: WebGLRenderingContext,
-    vsSource: string,
-    fsSource: string
-  ) {
-    this.gl = gl;
+  public constructor(vsSource: string, fsSource: string) {
     this.program = this.createProgram(vsSource, fsSource);
   }
 
   public use(): void {
-    this.gl.useProgram(this.program);
+    gl.useProgram(this.program);
   }
 
   public getAttribLocation(name: string): number {
-    return this.gl.getAttribLocation(this.program!, name);
+    return gl.getAttribLocation(this.program!, name);
   }
 
   public getUniformLocation(name: string): WebGLUniformLocation | null {
-    return this.gl.getUniformLocation(this.program!, name);
+    return gl.getUniformLocation(this.program!, name);
   }
 
   private createProgram(vsSource: string, fsSource: string): WebGLProgram {
-    const vertexShader = this.compileShader(this.gl.VERTEX_SHADER, vsSource);
-    const fragmentShader = this.compileShader(
-      this.gl.FRAGMENT_SHADER,
-      fsSource
-    );
+    const vertexShader = this.compileShader(gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
 
-    const shaderProgram = this.gl.createProgram();
+    const shaderProgram = gl.createProgram();
     if (!shaderProgram) throw new Error('Failed to create shader program');
 
-    this.gl.attachShader(shaderProgram, vertexShader);
-    this.gl.attachShader(shaderProgram, fragmentShader);
-    this.gl.linkProgram(shaderProgram);
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
 
-    if (!this.gl.getProgramParameter(shaderProgram, this.gl.LINK_STATUS)) {
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
       throw new Error('Unable to initialize shader program');
     }
 
@@ -52,15 +45,15 @@ export class ShaderProgram {
   }
 
   private compileShader(type: number, source: string): WebGLShader {
-    const shader = this.gl.createShader(type);
+    const shader = gl.createShader(type);
     if (!shader) throw new Error('Failed to create shader');
 
-    this.gl.shaderSource(shader, source);
-    this.gl.compileShader(shader);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
 
-    if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-      const info = this.gl.getShaderInfoLog(shader);
-      this.gl.deleteShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const info = gl.getShaderInfoLog(shader);
+      gl.deleteShader(shader);
       throw new Error('Shader compilation error: ' + info);
     }
 

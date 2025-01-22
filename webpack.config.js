@@ -5,7 +5,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default {
-  entry: './src/index.ts',
+  entry: {
+    index: './src/index.ts',
+    gl: './src/gl.ts',
+  },
   module: {
     rules: [
       {
@@ -23,7 +26,7 @@ export default {
     extensions: ['.tsx', '.ts', '.js'],
   },
   output: {
-    filename: 'bundle.js',
+    filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
   mode: 'development',

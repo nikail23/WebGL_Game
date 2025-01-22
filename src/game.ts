@@ -6,10 +6,9 @@ import { WeaponHelper } from './core/weapon-helper';
 import { HUD } from './core/hud/hud';
 import { Crosshair } from './core/hud/crosshair';
 import { Object3DFabric } from './core/object-fabric';
+import { aspectRatio, canvas, fov, gl } from './gl';
 
 export class Game {
-  private canvas: HTMLCanvasElement;
-  private gl: WebGLRenderingContext;
   private lastTime: number;
   private shaderProgram: ShaderProgram;
   private object3DFabric: Object3DFabric;
@@ -19,28 +18,19 @@ export class Game {
   private projectionMatrix: mat4;
   private modelViewMatrix: mat4;
 
-  public constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
-  }
-
   private async initWebGL(): Promise<void> {
-    this.gl = this.canvas?.getContext('webgl') as WebGLRenderingContext;
-    if (!this.gl) {
-      throw new Error('WebGL not supported');
-    }
-
     const { vs, fs } = await ShaderLoader.loadShaders();
-    this.shaderProgram = new ShaderProgram(this.gl, vs, fs);
+    this.shaderProgram = new ShaderProgram(vs, fs);
     this.shaderProgram.use();
 
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    this.gl.enable(this.gl.DEPTH_TEST);
-    this.gl.depthFunc(this.gl.LEQUAL);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
   private async initModels(): Promise<void> {
-    this.object3DFabric = new Object3DFabric(this.gl, this.shaderProgram);
+    this.object3DFabric = new Object3DFabric(gl, this.shaderProgram);
     await this.object3DFabric.createModel(
       'assets/models/cube/cube.obj',
       vec4.create(),
@@ -66,8 +56,8 @@ export class Game {
   }
 
   private initListeners(): void {
-    this.canvas.addEventListener('click', () => {
-      this.canvas.requestPointerLock();
+    canvas.addEventListener('click', () => {
+      canvas.requestPointerLock();
     });
 
     // this.canvas.addEventListener('mousedown', (e) => {
@@ -119,11 +109,10 @@ export class Game {
   }
 
   private async render(): Promise<void> {
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    const fieldOfView = (45 * Math.PI) / 180;
-    const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
-    mat4.perspective(this.projectionMatrix, fieldOfView, aspect, 0.1, 100.0);
+    mat4.perspective(this.projectionMatrix, fov, aspectRatio, 0.1, 100.0);
+
     this.camera.getViewMatrix(this.modelViewMatrix);
 
     if (this.shaderProgram) {
@@ -132,12 +121,8 @@ export class Game {
       const modelViewLocation =
         this.shaderProgram.getUniformLocation('uModelViewMatrix');
 
-      this.gl.uniformMatrix4fv(
-        projectionLocation,
-        false,
-        this.projectionMatrix
-      );
-      this.gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
+      gl.uniformMatrix4fv(projectionLocation, false, this.projectionMatrix);
+      gl.uniformMatrix4fv(modelViewLocation, false, this.modelViewMatrix);
 
       // await this.weaponHelper.render(this.modelViewMatrix);
 
