@@ -34,6 +34,7 @@ export default [
       '@typescript-eslint/prefer-destructuring': 'error',
       '@typescript-eslint/require-await': 'error',
       '@typescript-eslint/explicit-member-accessibility': 'error',
+      '@typescript-eslint/explicit-function-return-type': 'none',
       'prettier/prettier': 'error',
     },
   },
