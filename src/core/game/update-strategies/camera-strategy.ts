@@ -1,6 +1,5 @@
 import { vec3 } from 'gl-matrix';
 import { Object3D } from '../object';
-import { SceneData } from '../scene/scene-data';
 import { UpdateStrategy } from './strategy';
 
 const MOVE_SPEED = 5;
@@ -48,11 +47,7 @@ export class CameraStrategy extends UpdateStrategy {
     });
   }
 
-  public update(
-    deltaTime: number,
-    current: Object3D,
-    sceneData: SceneData
-  ): void {
+  public update(deltaTime: number, current: Object3D): void {
     if (!this.isGrounded) {
       this._velocity[1] += GRAVITY * deltaTime;
     }

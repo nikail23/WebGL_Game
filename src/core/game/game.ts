@@ -12,16 +12,7 @@ export class Game {
   private modelViewMatrix: mat4;
   private scene: Scene;
 
-  private async initWebGL(): Promise<void> {
-    await currentProgram.init();
-
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  }
-
-  private initScene(): void {
+  constructor() {
     this.projectionMatrix = mat4.create();
     this.modelViewMatrix = mat4.create();
 
@@ -64,9 +55,24 @@ export class Game {
           model: 'floor',
         },
       ],
+      light: {
+        color: vec3.fromValues(1, 1, 1),
+        intensity: 1,
+        position: vec3.fromValues(0, 0, 0),
+      },
     });
 
     this.lastTime = 0;
+
+    this.hud = new HUD();
+    this.hud.addElement(new Crosshair());
+  }
+
+  private async initWebGL(): Promise<void> {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
   private initListeners(): void {
@@ -75,15 +81,8 @@ export class Game {
     });
   }
 
-  private initHUD(): void {
-    this.hud = new HUD();
-    this.hud.addElement(new Crosshair());
-  }
-
   private async initGame(): Promise<void> {
     await this.initWebGL();
-    this.initScene();
-    this.initHUD();
     this.initListeners();
   }
 

@@ -9,15 +9,16 @@ export class Model3D {
   private _textureUrl: string;
   private _defaultColor: vec4;
 
-  private _mesh: MeshWithBuffers;
-  private _texture: WebGLTexture;
+  private _mesh: MeshWithBuffers | null = null;
+  private _texture: WebGLTexture | null = null;
 
-  private _aVertexPosition: number;
-  private _aTextureCoordinate: number;
+  private _aVertexPosition: number | null = null;
+  private _aNormal: number | null = null;
+  private _aTextureCoordinate: number | null = null;
 
-  private _uHasTexture: WebGLUniformLocation;
-  private _uSampler: WebGLUniformLocation;
-  private _uColor: WebGLUniformLocation;
+  private _uHasTexture: WebGLUniformLocation | null = null;
+  private _uSampler: WebGLUniformLocation | null = null;
+  private _uColor: WebGLUniformLocation | null = null;
 
   public get indices(): number {
     return this._mesh?.indices.length ?? 0;
@@ -40,6 +41,7 @@ export class Model3D {
 
     if (gl && currentProgram) {
       this._aVertexPosition = currentProgram.aVertexPosition;
+      this._aNormal = currentProgram.aNormal;
       this._aTextureCoordinate = currentProgram.aTextureCoordinate;
       this._uHasTexture = currentProgram.uHasTexture;
       this._uSampler = currentProgram.uSampler;
@@ -48,21 +50,50 @@ export class Model3D {
   }
 
   public prepareToRender(): boolean {
-    if (gl && currentProgram && this._mesh) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
-      gl.enableVertexAttribArray(this._aVertexPosition);
-      gl.vertexAttribPointer(this._aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+    if (!this._mesh) {
+      console.warn('GAME: Mesh is not loaded!');
+      return false;
+    }
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
-      gl.enableVertexAttribArray(this._aTextureCoordinate);
-      gl.vertexAttribPointer(
-        this._aTextureCoordinate,
-        2,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
+    if (gl && currentProgram) {
+      if (this._aVertexPosition !== null) {
+        gl.enableVertexAttribArray(this._aVertexPosition);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
+        gl.vertexAttribPointer(
+          this._aVertexPosition,
+          this._mesh.vertexBuffer.itemSize,
+          gl.FLOAT,
+          false,
+          0,
+          0
+        );
+      }
+
+      if (this._aNormal !== null) {
+        gl.enableVertexAttribArray(this._aNormal);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.normalBuffer);
+        gl.vertexAttribPointer(
+          this._aNormal,
+          this._mesh.normalBuffer.itemSize,
+          gl.FLOAT,
+          false,
+          0,
+          0
+        );
+      }
+
+      if (this._aTextureCoordinate !== null) {
+        gl.enableVertexAttribArray(this._aTextureCoordinate);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
+        gl.vertexAttribPointer(
+          this._aTextureCoordinate,
+          this._mesh.textureBuffer.itemSize,
+          gl.FLOAT,
+          false,
+          0,
+          0
+        );
+      }
 
       if (this._mesh.textures?.length) {
         gl.activeTexture(gl.TEXTURE0);
@@ -107,7 +138,9 @@ export class Model3D {
       const image = new Image();
       image.crossOrigin = 'anonymous';
       image.onload = () => {
-        this._handleLoadedTexture(this._texture, image);
+        if (this._texture) {
+          this._handleLoadedTexture(this._texture, image);
+        }
         resolve();
       };
       image.src = this._textureUrl;

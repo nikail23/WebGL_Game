@@ -3,8 +3,8 @@ import { Program } from '../program';
 
 export class FirstProgram extends Program {
   public async init(): Promise<void> {
-    const vsPath = '/src/shaders/vertex.glsl';
-    const fsPath = '/src/shaders/fragment.glsl';
+    const vsPath = '/src/core/webgl/shaders/vertex.glsl';
+    const fsPath = '/src/core/webgl/shaders/fragment.glsl';
 
     this.program = await this.setProgram(vsPath, fsPath);
 
@@ -15,6 +15,15 @@ export class FirstProgram extends Program {
     this.locations.attributes.aTextureCoordinate = gl.getAttribLocation(
       this.program,
       'aTextureCoordinate'
+    );
+    this.locations.attributes.aNormal = gl.getAttribLocation(
+      this.program,
+      'aNormal'
+    );
+
+    this.locations.uniforms.uLightPosition = gl.getUniformLocation(
+      this.program,
+      'uLightPosition'
     );
     this.locations.uniforms.uHasTexture = gl.getUniformLocation(
       this.program,
@@ -38,25 +47,47 @@ export class FirstProgram extends Program {
     );
   }
 
-  get aVertexPosition() {
+  public isReady(): boolean {
+    return (
+      !!this.program &&
+      !!~this.aVertexPosition &&
+      !!~this.aTextureCoordinate &&
+      !!~this.aNormal &&
+      !!this.uHasTexture &&
+      !!this.uSampler &&
+      !!this.uColor &&
+      !!this.uViewModelMatrix &&
+      !!this.uProjectionMatrix &&
+      !!this.uLightPosition
+    );
+  }
+
+  get aVertexPosition(): number {
     return this.locations.attributes.aVertexPosition;
   }
-  get aTextureCoordinate() {
+  get aNormal(): number {
+    return this.locations.attributes.aNormal;
+  }
+  get aTextureCoordinate(): number {
     return this.locations.attributes.aTextureCoordinate;
   }
-  get uHasTexture() {
+
+  get uHasTexture(): WebGLUniformLocation | null {
     return this.locations.uniforms.uHasTexture;
   }
-  get uSampler() {
+  get uSampler(): WebGLUniformLocation | null {
     return this.locations.uniforms.uSampler;
   }
-  get uColor() {
+  get uColor(): WebGLUniformLocation | null {
     return this.locations.uniforms.uColor;
   }
-  get uViewModelMatrix() {
+  get uLightPosition(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightPosition;
+  }
+  get uViewModelMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uViewModelMatrix;
   }
-  get uProjectionMatrix() {
+  get uProjectionMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uProjectionMatrix;
   }
 }

@@ -1,22 +1,23 @@
-import { mat4, quat, vec3 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { Model3D } from './model';
 import { gl, currentProgram } from '../webgl';
 import { SceneData } from './scene/scene-data';
 import { UpdateStrategy } from './update-strategies/strategy';
 
 export class Object3D {
-  private _model: Model3D;
   private _position = vec3.create();
   private _rotation = vec3.create();
   private _scale = vec3.create();
 
-  private _updateStrategy: UpdateStrategy;
+  private _model: Model3D | null = null;
+  private _updateStrategy: UpdateStrategy | null = null;
 
   public get position(): vec3 {
     return this._position;
   }
 
   public set position(value: vec3) {
+    this._position = vec3.create();
     vec3.copy(this._position, value);
   }
 
@@ -25,6 +26,7 @@ export class Object3D {
   }
 
   public set rotation(value: vec3) {
+    this._rotation = vec3.create();
     vec3.copy(this._rotation, value);
   }
 
@@ -33,12 +35,18 @@ export class Object3D {
   }
 
   public set scale(value: vec3) {
+    this._scale = vec3.create();
     vec3.copy(this._scale, value);
   }
 
   public constructor(model?: Model3D, updateStrategy?: UpdateStrategy) {
-    this._model = model;
-    this._updateStrategy = updateStrategy;
+    if (model) {
+      this._model = model;
+    }
+
+    if (updateStrategy) {
+      this._updateStrategy = updateStrategy;
+    }
 
     if (this._updateStrategy?.init) {
       this._updateStrategy.init(this);
@@ -62,7 +70,7 @@ export class Object3D {
     }
   }
 
-  public update(deltaTime: number, sceneData?: SceneData): void {
+  public update(deltaTime: number, sceneData: SceneData): void {
     if (this._updateStrategy) {
       this._updateStrategy.update(deltaTime, this, sceneData);
     }

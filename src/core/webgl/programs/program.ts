@@ -1,7 +1,7 @@
 import { gl } from '../context';
 
 export abstract class Program {
-  protected program: WebGLProgram;
+  protected program: WebGLProgram | null = null;
   protected locations: {
     attributes: { [key: string]: number };
     uniforms: { [key: string]: WebGLUniformLocation | null };
@@ -11,6 +11,8 @@ export abstract class Program {
   };
 
   public abstract init(): Promise<void>;
+
+  public abstract isReady(): boolean;
 
   protected async setProgram(
     vsPath: string,
