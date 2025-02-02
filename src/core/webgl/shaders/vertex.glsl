@@ -6,18 +6,15 @@ uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform mat3 uNormalMatrix;
-uniform vec3 uLightPosition;
 
-varying vec4 vVertex;
-varying vec2 vTexCoordinate;
-varying vec3 vNormal;
-varying vec3 vLightPosition;
+varying vec4 vWorldVertex;
+varying vec3 vWorldNormal;
+varying vec2 vWorldTexture;
 
 void main() {
-  vLightPosition = vec3(uViewMatrix * vec4(uLightPosition, 1.0));
-  vVertex = uViewMatrix * uModelMatrix * aVertexPosition;
-  vNormal = normalize(uNormalMatrix * aNormal.xyz);
-  vTexCoordinate = aTextureCoordinate;
+  vWorldVertex = uModelMatrix * aVertexPosition;
+  vWorldNormal = normalize(uNormalMatrix * aNormal.xyz);
+  vWorldTexture = aTextureCoordinate;
 
-  gl_Position = uProjectionMatrix * vVertex;
+  gl_Position = uProjectionMatrix * uViewMatrix * vWorldVertex;
 }

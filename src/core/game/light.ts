@@ -8,7 +8,7 @@ export class Light extends Object3D {
 
   public prepareToRender(): void {
     if (gl && currentProgram) {
-      const uLightPosition = currentProgram.uLightPosition;
+      const uLightPosition = currentProgram.uWorldLight;
 
       gl.uniform3fv(
         uLightPosition,

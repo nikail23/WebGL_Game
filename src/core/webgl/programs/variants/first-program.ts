@@ -21,9 +21,9 @@ export class FirstProgram extends Program {
       'aNormal'
     );
 
-    this.locations.uniforms.uLightPosition = gl.getUniformLocation(
+    this.locations.uniforms.uWorldLight = gl.getUniformLocation(
       this.program,
-      'uLightPosition'
+      'uWorldLight'
     );
     this.locations.uniforms.uHasTexture = gl.getUniformLocation(
       this.program,
@@ -68,7 +68,7 @@ export class FirstProgram extends Program {
       !!this.uModelMatrix &&
       !!this.uProjectionMatrix &&
       !!this.uNormalMatrix &&
-      !!this.uLightPosition
+      !!this.uWorldLight
     );
   }
 
@@ -91,8 +91,8 @@ export class FirstProgram extends Program {
   get uColor(): WebGLUniformLocation | null {
     return this.locations.uniforms.uColor;
   }
-  get uLightPosition(): WebGLUniformLocation | null {
-    return this.locations.uniforms.uLightPosition;
+  get uWorldLight(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uWorldLight;
   }
   get uModelMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uModelMatrix;

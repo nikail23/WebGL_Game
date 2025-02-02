@@ -3,18 +3,23 @@ precision mediump float;
 uniform float uHasTexture;
 uniform sampler2D uSampler;
 uniform vec4 uColor;
+uniform vec3 uWorldLight;
 
-varying vec3 vLightPosition;
-varying vec2 vTexCoordinate;
-varying vec4 vVertex;
-varying vec3 vNormal;
+varying vec4 vWorldVertex;
+varying vec3 vWorldNormal;
+varying vec2 vWorldTexture;
 
 void main() {
-  vec4 baseColor = mix(uColor, texture2D(uSampler, vTexCoordinate.st), uHasTexture);
+  vec4 baseColor = mix(uColor, texture2D(uSampler, vWorldTexture.st), uHasTexture);
 
-  vec4 ambient = vec4(0.2, 0.2, 0.2, 1.0);
+  vec3 ambientColor = 0.2 * vec3(baseColor);
 
-  float diffuse = max(dot(normalize(vNormal), normalize(vLightPosition - vVertex.xyz)), 0.0);
+  float cos = dot(normalize(vWorldNormal), normalize(uWorldLight - vWorldVertex.xyz));
+  cos = clamp(cos, 0.0, 1.0);
 
-  gl_FragColor = baseColor * (ambient + vec4(diffuse, diffuse, diffuse, 1.0));
+  vec3 diffuseColor = cos * vec3(baseColor);
+
+  vec3 totalColor = ambientColor + diffuseColor;
+
+  gl_FragColor = vec4(totalColor, baseColor.a);
 }
