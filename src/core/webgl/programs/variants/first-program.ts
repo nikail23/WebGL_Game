@@ -37,13 +37,21 @@ export class FirstProgram extends Program {
       this.program,
       'uColor'
     );
-    this.locations.uniforms.uViewModelMatrix = gl.getUniformLocation(
+    this.locations.uniforms.uViewMatrix = gl.getUniformLocation(
       this.program,
-      'uViewModelMatrix'
+      'uViewMatrix'
+    );
+    this.locations.uniforms.uModelMatrix = gl.getUniformLocation(
+      this.program,
+      'uModelMatrix'
     );
     this.locations.uniforms.uProjectionMatrix = gl.getUniformLocation(
       this.program,
       'uProjectionMatrix'
+    );
+    this.locations.uniforms.uNormalMatrix = gl.getUniformLocation(
+      this.program,
+      'uNormalMatrix'
     );
   }
 
@@ -56,8 +64,10 @@ export class FirstProgram extends Program {
       !!this.uHasTexture &&
       !!this.uSampler &&
       !!this.uColor &&
-      !!this.uViewModelMatrix &&
+      !!this.uViewMatrix &&
+      !!this.uModelMatrix &&
       !!this.uProjectionMatrix &&
+      !!this.uNormalMatrix &&
       !!this.uLightPosition
     );
   }
@@ -84,10 +94,16 @@ export class FirstProgram extends Program {
   get uLightPosition(): WebGLUniformLocation | null {
     return this.locations.uniforms.uLightPosition;
   }
-  get uViewModelMatrix(): WebGLUniformLocation | null {
-    return this.locations.uniforms.uViewModelMatrix;
+  get uModelMatrix(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uModelMatrix;
+  }
+  get uViewMatrix(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uViewMatrix;
   }
   get uProjectionMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uProjectionMatrix;
+  }
+  get uNormalMatrix(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uNormalMatrix;
   }
 }

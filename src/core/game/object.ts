@@ -1,4 +1,4 @@
-import { mat4, vec3 } from 'gl-matrix';
+import { mat3, mat4, vec3 } from 'gl-matrix';
 import { Model3D } from './model';
 import { gl, currentProgram } from '../webgl';
 import { SceneData } from './scene/scene-data';
@@ -53,12 +53,16 @@ export class Object3D {
     }
   }
 
-  public async render(viewMatrix: mat4): Promise<void> {
+  public async render(): Promise<void> {
     if (this._model) {
       const modelPrepared = await this._model?.prepareToRender();
 
       if (gl && currentProgram && modelPrepared) {
-        this._setViewModelMatrix(viewMatrix);
+        const modelMatrix = this._getModelMatrix();
+        const normalMatrix = this._getNormalMatrix(modelMatrix);
+
+        gl.uniformMatrix4fv(currentProgram.uModelMatrix, false, modelMatrix);
+        gl.uniformMatrix3fv(currentProgram.uNormalMatrix, false, normalMatrix);
 
         gl.drawElements(
           gl.TRIANGLES,
@@ -76,20 +80,6 @@ export class Object3D {
     }
   }
 
-  private _setViewModelMatrix(viewMatrix: mat4): void {
-    const viewModelMatrix = mat4.create();
-
-    const modelMatrix = this._getModelMatrix();
-
-    mat4.multiply(viewModelMatrix, viewMatrix, modelMatrix);
-
-    gl.uniformMatrix4fv(
-      currentProgram.uViewModelMatrix,
-      false,
-      viewModelMatrix
-    );
-  }
-
   private _getModelMatrix(): mat4 {
     const modelMatrix = mat4.create();
 
@@ -100,5 +90,11 @@ export class Object3D {
     mat4.scale(modelMatrix, modelMatrix, this._scale);
 
     return modelMatrix;
+  }
+
+  private _getNormalMatrix(modelMatrix: mat4): mat3 {
+    const normalMatrix = mat3.create();
+    mat3.normalFromMat4(normalMatrix, modelMatrix);
+    return normalMatrix;
   }
 }

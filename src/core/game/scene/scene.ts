@@ -1,9 +1,11 @@
+import { mat4 } from 'gl-matrix';
 import { Camera } from '../camera';
 import { Light } from '../light';
 import { Model3D } from '../model';
 import { Object3D } from '../object';
 import { SceneData } from './scene-data';
 import { SceneParams } from './scene-params';
+import { fov, aspectRatio, gl, currentProgram } from '../../webgl';
 
 export class Scene {
   private _models: Model3D[] = [];
@@ -13,15 +15,15 @@ export class Scene {
 
   constructor(params: SceneParams) {
     this._initScene(params);
+    this._setProjectionMatrix();
   }
 
   public async render(): Promise<void> {
     const viewMatrix = this._camera.getViewMatrix();
-
-    this._light?.prepareToRender();
+    gl.uniformMatrix4fv(currentProgram.uViewMatrix, false, viewMatrix);
 
     for (const object of this._objects) {
-      await object.render(viewMatrix);
+      await object.render();
     }
   }
 
@@ -78,6 +80,17 @@ export class Scene {
     if (params.light) {
       this._light = new Light();
       this._light.position = params.light.position;
+      this._light.prepareToRender();
     }
+  }
+
+  private _setProjectionMatrix(): void {
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix, fov, aspectRatio, 0.1, 100.0);
+    gl.uniformMatrix4fv(
+      currentProgram.uProjectionMatrix,
+      false,
+      projectionMatrix
+    );
   }
 }

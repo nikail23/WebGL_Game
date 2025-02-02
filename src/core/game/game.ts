@@ -1,21 +1,16 @@
-import { mat4, vec3, vec4 } from 'gl-matrix';
+import { vec3, vec4 } from 'gl-matrix';
 import { HUD } from '../hud/hud';
 import { Crosshair } from '../hud/crosshair';
-import { aspectRatio, canvas, fov, gl, currentProgram } from '../webgl';
+import { canvas, gl, currentProgram } from '../webgl';
 import { Scene } from './scene/scene';
 import { Model3D } from './model';
 
 export class Game {
   private lastTime: number;
   private hud: HUD;
-  private projectionMatrix: mat4;
-  private modelViewMatrix: mat4;
   private scene: Scene;
 
   constructor() {
-    this.projectionMatrix = mat4.create();
-    this.modelViewMatrix = mat4.create();
-
     this.scene = new Scene({
       camera: {
         position: vec3.fromValues(0, 2, 6),
@@ -58,7 +53,7 @@ export class Game {
       light: {
         color: vec3.fromValues(1, 1, 1),
         intensity: 1,
-        position: vec3.fromValues(0, 0, 0),
+        position: vec3.fromValues(2, 2, 2),
       },
     });
 
@@ -110,20 +105,7 @@ export class Game {
   private async render(): Promise<void> {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(this.projectionMatrix, fov, aspectRatio, 0.1, 100.0);
-
     if (currentProgram) {
-      gl.uniformMatrix4fv(
-        currentProgram.uProjectionMatrix,
-        false,
-        this.projectionMatrix
-      );
-      gl.uniformMatrix4fv(
-        currentProgram.uViewModelMatrix,
-        false,
-        this.modelViewMatrix
-      );
-
       await this.scene.render();
 
       this.hud.draw();
