@@ -1,25 +1,37 @@
 precision mediump float;
 
+struct Light {
+  vec3 position;
+  vec3 color;
+  float shininess;
+  float ambient;
+};
+
 uniform float uHasTexture;
 uniform sampler2D uSampler;
 uniform vec4 uColor;
-uniform vec3 uWorldLight;
+uniform Light uLight;
 
-varying vec4 vWorldVertex;
-varying vec3 vWorldNormal;
-varying vec2 vWorldTexture;
+varying vec4 vVertex;
+varying vec3 vNormal;
+varying vec2 vTexture;
+
+vec3 calculateReflection(vec3 baseColor) {
+  vec3 normal = normalize(vNormal);
+  vec3 lightDir = normalize(uLight.position - vVertex.xyz);
+  vec3 viewDir = normalize(-vVertex.xyz);
+
+  vec3 ambientColor = uLight.ambient * baseColor;
+  vec3 diffuseColor = max(dot(normal, lightDir), 0.0) * baseColor;
+  vec3 specularColor = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), uLight.shininess) * vec3(uLight.color);
+
+  return ambientColor + diffuseColor + specularColor;
+}
 
 void main() {
-  vec4 baseColor = mix(uColor, texture2D(uSampler, vWorldTexture.st), uHasTexture);
+  vec4 baseColor = mix(uColor, texture2D(uSampler, vTexture.st), uHasTexture);
 
-  vec3 ambientColor = 0.2 * vec3(baseColor);
-
-  float cos = dot(normalize(vWorldNormal), normalize(uWorldLight - vWorldVertex.xyz));
-  cos = clamp(cos, 0.0, 1.0);
-
-  vec3 diffuseColor = cos * vec3(baseColor);
-
-  vec3 totalColor = ambientColor + diffuseColor;
+  vec3 totalColor = calculateReflection(baseColor.rgb);
 
   gl_FragColor = vec4(totalColor, baseColor.a);
 }

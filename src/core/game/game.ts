@@ -32,13 +32,25 @@ export class Game {
       ],
       objects: [
         {
-          position: vec3.fromValues(0, -1, 0),
+          position: vec3.fromValues(2, -1, 2),
           rotation: vec3.fromValues(0, 0, 0),
           scale: vec3.fromValues(1, 1, 1),
           model: 'cube',
         },
         {
-          position: vec3.fromValues(2.1, -1, 0),
+          position: vec3.fromValues(-2, -1, 2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          model: 'cube',
+        },
+        {
+          position: vec3.fromValues(2, -1, -2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          model: 'cube',
+        },
+        {
+          position: vec3.fromValues(-2, -1, -2),
           rotation: vec3.fromValues(0, 0, 0),
           scale: vec3.fromValues(1, 1, 1),
           model: 'cube',
@@ -52,8 +64,9 @@ export class Game {
       ],
       light: {
         color: vec3.fromValues(1, 1, 1),
-        intensity: 1,
-        position: vec3.fromValues(2, 2, 2),
+        shininess: 32,
+        ambient: 0.2,
+        position: vec3.fromValues(0, 2, 0),
       },
     });
 

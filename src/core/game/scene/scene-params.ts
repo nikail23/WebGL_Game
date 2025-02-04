@@ -16,8 +16,9 @@ export interface SceneParams {
     strategy?: UpdateStrategy;
   }[];
   light?: {
-    color?: vec3;
-    intensity?: number;
+    color: vec3;
+    shininess: number;
+    ambient: number;
     position: vec3;
   };
 }

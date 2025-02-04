@@ -53,13 +53,17 @@ export class Object3D {
     }
   }
 
-  public async render(): Promise<void> {
+  public async render(viewMatrix: mat4): Promise<void> {
     if (this._model) {
       const modelPrepared = await this._model?.prepareToRender();
 
       if (gl && currentProgram && modelPrepared) {
         const modelMatrix = this._getModelMatrix();
-        const normalMatrix = this._getNormalMatrix(modelMatrix);
+
+        const normalMatrix = mat3.create();
+        const viewModelMatrix = mat4.create();
+        mat4.multiply(viewModelMatrix, viewMatrix, modelMatrix);
+        mat3.normalFromMat4(normalMatrix, viewModelMatrix);
 
         gl.uniformMatrix4fv(currentProgram.uModelMatrix, false, modelMatrix);
         gl.uniformMatrix3fv(currentProgram.uNormalMatrix, false, normalMatrix);
@@ -90,11 +94,5 @@ export class Object3D {
     mat4.scale(modelMatrix, modelMatrix, this._scale);
 
     return modelMatrix;
-  }
-
-  private _getNormalMatrix(modelMatrix: mat4): mat3 {
-    const normalMatrix = mat3.create();
-    mat3.normalFromMat4(normalMatrix, modelMatrix);
-    return normalMatrix;
   }
 }

@@ -20,10 +20,13 @@ export class Scene {
 
   public async render(): Promise<void> {
     const viewMatrix = this._camera.getViewMatrix();
+
     gl.uniformMatrix4fv(currentProgram.uViewMatrix, false, viewMatrix);
 
+    this._light?.prepareToRender(viewMatrix);
+
     for (const object of this._objects) {
-      await object.render();
+      await object.render(viewMatrix);
     }
   }
 
@@ -80,7 +83,9 @@ export class Scene {
     if (params.light) {
       this._light = new Light();
       this._light.position = params.light.position;
-      this._light.prepareToRender();
+      this._light.color = params.light.color;
+      this._light.shininess = params.light.shininess;
+      this._light.ambient = params.light.ambient;
     }
   }
 

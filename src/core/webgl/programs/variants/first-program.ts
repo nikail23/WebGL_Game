@@ -21,10 +21,6 @@ export class FirstProgram extends Program {
       'aNormal'
     );
 
-    this.locations.uniforms.uWorldLight = gl.getUniformLocation(
-      this.program,
-      'uWorldLight'
-    );
     this.locations.uniforms.uHasTexture = gl.getUniformLocation(
       this.program,
       'uHasTexture'
@@ -53,6 +49,22 @@ export class FirstProgram extends Program {
       this.program,
       'uNormalMatrix'
     );
+    this.locations.uniforms.uLightPosition = gl.getUniformLocation(
+      this.program,
+      'uLight.position'
+    );
+    this.locations.uniforms.uLightColor = gl.getUniformLocation(
+      this.program,
+      'uLight.color'
+    );
+    this.locations.uniforms.uLightShininess = gl.getUniformLocation(
+      this.program,
+      'uLight.shininess'
+    );
+    this.locations.uniforms.uLightAmbient = gl.getUniformLocation(
+      this.program,
+      'uLight.ambient'
+    );
   }
 
   public isReady(): boolean {
@@ -68,7 +80,10 @@ export class FirstProgram extends Program {
       !!this.uModelMatrix &&
       !!this.uProjectionMatrix &&
       !!this.uNormalMatrix &&
-      !!this.uWorldLight
+      !!this.uLightPosition &&
+      !!this.uLightColor &&
+      !!this.uLightShininess &&
+      !!this.uLightAmbient
     );
   }
 
@@ -91,9 +106,6 @@ export class FirstProgram extends Program {
   get uColor(): WebGLUniformLocation | null {
     return this.locations.uniforms.uColor;
   }
-  get uWorldLight(): WebGLUniformLocation | null {
-    return this.locations.uniforms.uWorldLight;
-  }
   get uModelMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uModelMatrix;
   }
@@ -105,5 +117,17 @@ export class FirstProgram extends Program {
   }
   get uNormalMatrix(): WebGLUniformLocation | null {
     return this.locations.uniforms.uNormalMatrix;
+  }
+  get uLightPosition(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightPosition;
+  }
+  get uLightColor(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightColor;
+  }
+  get uLightShininess(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightShininess;
+  }
+  get uLightAmbient(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightAmbient;
   }
 }
