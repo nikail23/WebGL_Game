@@ -1,45 +1,20 @@
 import { mat3, mat4, vec3 } from 'gl-matrix';
 import { Model3D } from './model';
-import { gl, currentProgram } from '../webgl';
+import { gl, mainProgram, shadowProgram } from '../webgl';
 import { SceneData } from './scene/scene-data';
 import { UpdateStrategy } from './update-strategies/strategy';
 
 export class Object3D {
-  private _position = vec3.create();
-  private _rotation = vec3.create();
-  private _scale = vec3.create();
-
   private _model: Model3D | null = null;
   private _updateStrategy: UpdateStrategy | null = null;
 
-  public get position(): vec3 {
-    return this._position;
-  }
-
-  public set position(value: vec3) {
-    this._position = vec3.create();
-    vec3.copy(this._position, value);
-  }
-
-  public get rotation(): vec3 {
-    return this._rotation;
-  }
-
-  public set rotation(value: vec3) {
-    this._rotation = vec3.create();
-    vec3.copy(this._rotation, value);
-  }
-
-  public get scale(): vec3 {
-    return this._scale;
-  }
-
-  public set scale(value: vec3) {
-    this._scale = vec3.create();
-    vec3.copy(this._scale, value);
-  }
-
-  public constructor(model?: Model3D, updateStrategy?: UpdateStrategy) {
+  public constructor(
+    public position = vec3.create(),
+    public rotation = vec3.create(),
+    public scale = vec3.create(),
+    model?: Model3D,
+    updateStrategy?: UpdateStrategy
+  ) {
     if (model) {
       this._model = model;
     }
@@ -54,28 +29,49 @@ export class Object3D {
   }
 
   public async render(viewMatrix: mat4): Promise<void> {
-    if (this._model) {
-      const modelPrepared = await this._model?.prepareToRender();
+    const indices = await this._model?.prepareToRender();
 
-      if (gl && currentProgram && modelPrepared) {
-        const modelMatrix = this._getModelMatrix();
-
-        const normalMatrix = mat3.create();
-        const viewModelMatrix = mat4.create();
-        mat4.multiply(viewModelMatrix, viewMatrix, modelMatrix);
-        mat3.normalFromMat4(normalMatrix, viewModelMatrix);
-
-        gl.uniformMatrix4fv(currentProgram.uModelMatrix, false, modelMatrix);
-        gl.uniformMatrix3fv(currentProgram.uNormalMatrix, false, normalMatrix);
-
-        gl.drawElements(
-          gl.TRIANGLES,
-          this._model.indices,
-          gl.UNSIGNED_SHORT,
-          0
-        );
-      }
+    if (!mainProgram?.isActive) {
+      console.warn('GAME_render: Main program is not active!');
+      return;
     }
+
+    if (!indices) {
+      console.warn('GAME_render: Indices are not loaded!');
+      return;
+    }
+
+    const modelMatrix = this._getModelMatrix();
+
+    const normalMatrix = mat3.create();
+    const viewModelMatrix = mat4.create();
+    mat4.multiply(viewModelMatrix, viewMatrix, modelMatrix);
+    mat3.normalFromMat4(normalMatrix, viewModelMatrix);
+
+    gl.uniformMatrix4fv(mainProgram.uModelMatrix, false, modelMatrix);
+    gl.uniformMatrix3fv(mainProgram.uNormalMatrix, false, normalMatrix);
+
+    gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_SHORT, 0);
+  }
+
+  public async renderShadow(): Promise<void> {
+    const indices = await this._model?.prepareToShadowRender();
+
+    if (!shadowProgram?.isActive) {
+      console.warn('GAME_renderShadow: Shadow program is not active!');
+      return;
+    }
+
+    if (!indices) {
+      console.warn('GAME_renderShadow: Indices are not loaded!');
+      return;
+    }
+
+    const modelMatrix = this._getModelMatrix();
+
+    gl.uniformMatrix4fv(shadowProgram.uModelMatrix, false, modelMatrix);
+
+    gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_SHORT, 0);
   }
 
   public update(deltaTime: number, sceneData: SceneData): void {
@@ -87,11 +83,11 @@ export class Object3D {
   private _getModelMatrix(): mat4 {
     const modelMatrix = mat4.create();
 
-    mat4.translate(modelMatrix, modelMatrix, this._position);
-    mat4.rotateX(modelMatrix, modelMatrix, this._rotation[0]);
-    mat4.rotateY(modelMatrix, modelMatrix, this._rotation[1]);
-    mat4.rotateZ(modelMatrix, modelMatrix, this._rotation[2]);
-    mat4.scale(modelMatrix, modelMatrix, this._scale);
+    mat4.translate(modelMatrix, modelMatrix, this.position);
+    mat4.rotateX(modelMatrix, modelMatrix, this.rotation[0]);
+    mat4.rotateY(modelMatrix, modelMatrix, this.rotation[1]);
+    mat4.rotateZ(modelMatrix, modelMatrix, this.rotation[2]);
+    mat4.scale(modelMatrix, modelMatrix, this.scale);
 
     return modelMatrix;
   }

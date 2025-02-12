@@ -1,7 +1,7 @@
 import { vec4 } from 'gl-matrix';
 import { MeshWithBuffers, OBJ } from 'webgl-obj-loader';
 import { gl } from '../webgl';
-import { currentProgram } from '../webgl/programs/current-program';
+import { mainProgram, shadowProgram } from '../webgl/programs/current-program';
 
 export class Model3D {
   private _name: string;
@@ -11,14 +11,6 @@ export class Model3D {
 
   private _mesh: MeshWithBuffers | null = null;
   private _texture: WebGLTexture | null = null;
-
-  private _aVertexPosition: number | null = null;
-  private _aNormal: number | null = null;
-  private _aTextureCoordinate: number | null = null;
-
-  private _uHasTexture: WebGLUniformLocation | null = null;
-  private _uSampler: WebGLUniformLocation | null = null;
-  private _uColor: WebGLUniformLocation | null = null;
 
   public get indices(): number {
     return this._mesh?.indices.length ?? 0;
@@ -38,87 +30,108 @@ export class Model3D {
     this._objUrl = objUrl;
     this._textureUrl = textureUrl;
     this._defaultColor = defaultColor;
-
-    if (gl && currentProgram) {
-      this._aVertexPosition = currentProgram.aVertexPosition;
-      this._aNormal = currentProgram.aNormal;
-      this._aTextureCoordinate = currentProgram.aTextureCoordinate;
-      this._uHasTexture = currentProgram.uHasTexture;
-      this._uSampler = currentProgram.uSampler;
-      this._uColor = currentProgram.uColor;
-    }
   }
 
-  public prepareToRender(): boolean {
+  public prepareToRender(): number {
     if (!this._mesh) {
-      console.warn('GAME: Mesh is not loaded!');
-      return false;
+      console.warn('GAME_prepareToRender: Mesh is not loaded!');
+      return 0;
     }
 
-    if (gl && currentProgram) {
-      if (this._aVertexPosition !== null) {
-        gl.enableVertexAttribArray(this._aVertexPosition);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
-        gl.vertexAttribPointer(
-          this._aVertexPosition,
-          this._mesh.vertexBuffer.itemSize,
-          gl.FLOAT,
-          false,
-          0,
-          0
-        );
-      }
-
-      if (this._aNormal !== null) {
-        gl.enableVertexAttribArray(this._aNormal);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.normalBuffer);
-        gl.vertexAttribPointer(
-          this._aNormal,
-          this._mesh.normalBuffer.itemSize,
-          gl.FLOAT,
-          false,
-          0,
-          0
-        );
-      }
-
-      if (this._aTextureCoordinate !== null) {
-        gl.enableVertexAttribArray(this._aTextureCoordinate);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
-        gl.vertexAttribPointer(
-          this._aTextureCoordinate,
-          this._mesh.textureBuffer.itemSize,
-          gl.FLOAT,
-          false,
-          0,
-          0
-        );
-      }
-
-      if (this._mesh.textures?.length) {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1i(this._uSampler, 0);
-        gl.uniform1f(this._uHasTexture, 1);
-      } else {
-        gl.uniform1f(this._uHasTexture, 0);
-        gl.uniform4fv(
-          this._uColor,
-          new Float32Array([
-            this._defaultColor[0],
-            this._defaultColor[1],
-            this._defaultColor[2],
-            this._defaultColor[3],
-          ])
-        );
-      }
-
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._mesh.indexBuffer);
-
-      return true;
+    if (!mainProgram?.isActive) {
+      console.warn('GAME_prepareToRender: Main program is not active!');
+      return 0;
     }
 
-    return false;
+    if (mainProgram.aVertexPosition !== null) {
+      gl.enableVertexAttribArray(mainProgram.aVertexPosition);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
+      gl.vertexAttribPointer(
+        mainProgram.aVertexPosition,
+        this._mesh.vertexBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+    }
+
+    if (mainProgram.aNormal !== null) {
+      gl.enableVertexAttribArray(mainProgram.aNormal);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.normalBuffer);
+      gl.vertexAttribPointer(
+        mainProgram.aNormal,
+        this._mesh.normalBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+    }
+
+    if (mainProgram.aTextureCoordinate !== null) {
+      gl.enableVertexAttribArray(mainProgram.aTextureCoordinate);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
+      gl.vertexAttribPointer(
+        mainProgram.aTextureCoordinate,
+        this._mesh.textureBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+    }
+
+    if (this._mesh.textures?.length) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this._texture);
+      gl.uniform1i(mainProgram.uSampler, 0);
+      gl.uniform1f(mainProgram.uHasTexture, 1);
+    } else {
+      gl.uniform1f(mainProgram.uHasTexture, 0);
+      gl.uniform4fv(
+        mainProgram.uColor,
+        new Float32Array([
+          this._defaultColor[0],
+          this._defaultColor[1],
+          this._defaultColor[2],
+          this._defaultColor[3],
+        ])
+      );
+    }
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._mesh.indexBuffer);
+
+    return this.indices;
+  }
+
+  public prepareToShadowRender(): number {
+    if (!this._mesh) {
+      console.warn('GAME_prepareToShadowRender: Mesh is not loaded!');
+      return 0;
+    }
+
+    if (!shadowProgram.isActive) {
+      console.warn('GAME_prepareToShadowRender: Shadow program is not active!');
+      return 0;
+    }
+
+    if (shadowProgram.aVertexPosition !== null) {
+      gl.enableVertexAttribArray(shadowProgram.aVertexPosition);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
+      gl.vertexAttribPointer(
+        shadowProgram.aVertexPosition,
+        this._mesh.vertexBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+    }
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._mesh.indexBuffer);
+
+    return this.indices;
   }
 
   public async load(): Promise<void> {

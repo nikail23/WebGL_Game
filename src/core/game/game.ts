@@ -1,7 +1,7 @@
 import { vec3, vec4 } from 'gl-matrix';
 import { HUD } from '../hud/hud';
 import { Crosshair } from '../hud/crosshair';
-import { canvas, gl, currentProgram } from '../webgl';
+import { aspect, canvas, gl } from '../webgl';
 import { Scene } from './scene/scene';
 import { Model3D } from './model';
 
@@ -15,6 +15,10 @@ export class Game {
       camera: {
         position: vec3.fromValues(0, 2, 6),
         rotation: vec3.fromValues(0, 0, 0),
+        fov: (45 * Math.PI) / 180,
+        aspect,
+        near: 0.1,
+        far: 100,
       },
       models: [
         new Model3D(
@@ -66,7 +70,17 @@ export class Game {
         color: vec3.fromValues(1, 1, 1),
         shininess: 32,
         ambient: 0.2,
-        position: vec3.fromValues(0, 2, 0),
+        position: vec3.fromValues(0, 2, -5),
+        lookAt: vec3.fromValues(0, 0, 0),
+        fovy: Math.PI / 1.5,
+        aspect: 1,
+        near: 0.1,
+        far: 100,
+      },
+      shadows: {
+        enabled: true,
+        width: 1024,
+        height: 1024,
       },
     });
 
@@ -116,12 +130,8 @@ export class Game {
   }
 
   private async render(): Promise<void> {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    await this.scene.render();
 
-    if (currentProgram) {
-      await this.scene.render();
-
-      this.hud.draw();
-    }
+    this.hud.draw();
   }
 }

@@ -1,9 +1,16 @@
-import { currentProgram, Game } from './core';
+import { mainProgram, Game, shadowProgram } from './core';
 
-await currentProgram.init();
+await mainProgram.init();
+await shadowProgram.init();
 
-if (!currentProgram.isReady()) {
-  console.warn('GAME: Program is not ready! Check some locations...');
+mainProgram.use();
+
+if (!mainProgram.isReady()) {
+  console.warn('GAME: Main program is not ready! Check some locations...');
+}
+
+if (!shadowProgram.isReady()) {
+  console.warn('GAME: Shadow program is not ready! Check some locations...');
 }
 
 const game = new Game();

@@ -1,33 +1,103 @@
-import { mat4 } from 'gl-matrix';
 import { Camera } from '../camera';
 import { Light } from '../light';
 import { Model3D } from '../model';
 import { Object3D } from '../object';
 import { SceneData } from './scene-data';
 import { SceneParams } from './scene-params';
-import { fov, aspectRatio, gl, currentProgram } from '../../webgl';
+import { gl, mainProgram, shadowProgram } from '../../webgl';
 
 export class Scene {
+  private _camera: Camera;
   private _models: Model3D[] = [];
   private _objects: Object3D[] = [];
-  private _camera = new Camera();
   private _light: Light | null = null;
 
+  private _shadowMapData: {
+    frameBuffer: WebGLFramebuffer | null;
+    colorTexture: WebGLTexture | null;
+    depthTexture: WebGLTexture | null;
+    width: number;
+    height: number;
+  } | null = null;
+  private _shadowsEnabled: boolean;
+
   constructor(params: SceneParams) {
-    this._initScene(params);
-    this._setProjectionMatrix();
+    this._camera = new Camera(
+      params.camera.position,
+      params.camera.rotation,
+      params.camera.aspect,
+      params.camera.fov,
+      params.camera.near,
+      params.camera.far
+    );
+
+    this._models = params.models ?? [];
+    if (this._models.length) {
+      this._loadModels();
+    }
+
+    params.objects.forEach((objectParams) => {
+      const model = this._models.find(
+        (model) => model.name === objectParams.model
+      );
+
+      if (!model) {
+        throw new Error(`Model ${objectParams.model} not found`);
+      }
+
+      this._objects.push(
+        new Object3D(
+          objectParams.position,
+          objectParams.rotation,
+          objectParams.scale,
+          model,
+          objectParams.strategy
+        )
+      );
+    });
+
+    if (params.light) {
+      this._light = new Light(
+        params.light.position,
+        params.light.shininess,
+        params.light.color,
+        params.light.ambient,
+        params.light.lookAt,
+        params.light.fovy,
+        params.light.aspect,
+        params.light.near,
+        params.light.far
+      );
+    }
+
+    this._shadowsEnabled = params.shadows.enabled;
+    if (this._shadowsEnabled) {
+      this._shadowMapData = this._createFrameBufferObject(
+        params.shadows?.width ?? 1024,
+        params.shadows?.height ?? 1024
+      );
+    }
   }
 
   public async render(): Promise<void> {
-    const viewMatrix = this._camera.getViewMatrix();
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    gl.uniformMatrix4fv(currentProgram.uViewMatrix, false, viewMatrix);
+    gl.uniformMatrix4fv(
+      mainProgram.uProjectionMatrix,
+      false,
+      this._camera.projectionMatrix
+    );
 
-    this._light?.prepareToRender(viewMatrix);
+    let shadowMap: WebGLTexture | null = null;
 
-    for (const object of this._objects) {
-      await object.render(viewMatrix);
+    if (this._shadowsEnabled && this._shadowMapData) {
+      shadowMap = await this._renderShadowMap(
+        this._shadowMapData.width,
+        this._shadowMapData.width
+      );
     }
+
+    await this._renderScene(shadowMap);
   }
 
   public update(deltaTime: number): void {
@@ -42,60 +112,191 @@ export class Scene {
     await Promise.all(this._models.map((model) => model.load()));
   }
 
+  private _createFrameBufferObject(width: number, height: number) {
+    let frame_buffer: WebGLFramebuffer | null;
+    let color_buffer: WebGLTexture | null;
+    let depth_buffer: WebGLTexture | null;
+    let status: number;
+
+    function _errors(buffer: WebGLFramebuffer | null, buffer_name: string) {
+      var error_name = gl.getError();
+      if (!buffer || error_name !== gl.NO_ERROR) {
+        console.error(
+          'Error in _createFrameBufferObject,',
+          buffer_name,
+          'failed; ',
+          error_name
+        );
+
+        gl.deleteTexture(color_buffer);
+        gl.deleteFramebuffer(frame_buffer);
+
+        return true;
+      }
+      return false;
+    }
+
+    frame_buffer = gl.createFramebuffer();
+    if (_errors(frame_buffer, 'frame buffer')) {
+      return null;
+    }
+
+    color_buffer = gl.createTexture();
+    if (_errors(color_buffer, 'color buffer')) {
+      return null;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, color_buffer);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      width,
+      height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+    if (_errors(color_buffer, 'color buffer allocation')) {
+      return null;
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    depth_buffer = gl.createTexture();
+    if (_errors(depth_buffer, 'depth buffer')) {
+      return null;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.DEPTH_COMPONENT,
+      width,
+      height,
+      0,
+      gl.DEPTH_COMPONENT,
+      gl.UNSIGNED_INT,
+      null
+    );
+    if (_errors(depth_buffer, 'depth buffer allocation')) {
+      return null;
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frame_buffer);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      color_buffer,
+      0
+    );
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.DEPTH_ATTACHMENT,
+      gl.TEXTURE_2D,
+      depth_buffer,
+      0
+    );
+    if (_errors(frame_buffer, 'frame buffer')) {
+      return null;
+    }
+
+    status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      _errors(frame_buffer, 'frame buffer status:' + status.toString());
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    return {
+      frameBuffer: frame_buffer,
+      colorTexture: color_buffer,
+      depthTexture: depth_buffer,
+      width,
+      height,
+    };
+  }
+
+  private async _renderShadowMap(
+    width: number,
+    height: number
+  ): Promise<WebGLTexture | null> {
+    if (!this._light) {
+      console.warn('GAME_renderShadowMap: Light is not initialized!');
+      return null;
+    }
+
+    if (!this._shadowMapData) {
+      console.warn('GAME_renderShadowMap: Shadow map data is not initialized!');
+      return null;
+    }
+
+    shadowProgram.use();
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._shadowMapData.frameBuffer);
+    gl.viewport(0, 0, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    const lightViewProjMatrix = this._light.getLightViewProjectionMatrix();
+    gl.uniformMatrix4fv(
+      shadowProgram.uLightViewProjectionMatrix,
+      false,
+      lightViewProjMatrix
+    );
+
+    for (const object of this._objects) {
+      await object.renderShadow();
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    mainProgram.use();
+
+    return this._shadowMapData?.depthTexture ?? null;
+  }
+
+  private async _renderScene(shadowMap: WebGLTexture | null): Promise<void> {
+    gl.uniformMatrix4fv(
+      mainProgram.uViewMatrix,
+      false,
+      this._camera.viewMatrix
+    );
+
+    if (this._light && shadowMap) {
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, shadowMap);
+      gl.uniform1i(mainProgram.uShadowMap, 1);
+
+      const lightViewProjMatrix = this._light.getLightViewProjectionMatrix();
+      gl.uniformMatrix4fv(
+        mainProgram.uLightViewProjectionMatrix,
+        false,
+        lightViewProjMatrix
+      );
+    }
+
+    this._light?.prepareToRender(this._camera.viewMatrix);
+
+    for (const object of this._objects) {
+      await object.render(this._camera.viewMatrix);
+    }
+  }
+
   private _getSceneData(): SceneData {
     return {
       camera: this._camera,
       objects: this._objects,
     };
-  }
-
-  private async _initScene(params: SceneParams): Promise<void> {
-    if (params.camera?.position) {
-      this._camera.position = params.camera.position;
-    }
-
-    if (params.camera?.rotation) {
-      this._camera.rotation = params.camera.rotation;
-    }
-
-    this._models = params.models ?? [];
-    if (this._models.length) {
-      await this._loadModels();
-    }
-
-    params.objects.forEach((objectParams) => {
-      const model = this._models.find(
-        (model) => model.name === objectParams.model
-      );
-
-      if (!model) {
-        throw new Error(`Model ${objectParams.model} not found`);
-      }
-
-      const object = new Object3D(model, objectParams.strategy);
-      object.position = objectParams.position;
-      object.rotation = objectParams.rotation;
-      object.scale = objectParams.scale;
-
-      this._objects.push(object);
-    });
-
-    if (params.light) {
-      this._light = new Light();
-      this._light.position = params.light.position;
-      this._light.color = params.light.color;
-      this._light.shininess = params.light.shininess;
-      this._light.ambient = params.light.ambient;
-    }
-  }
-
-  private _setProjectionMatrix(): void {
-    const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fov, aspectRatio, 0.1, 100.0);
-    gl.uniformMatrix4fv(
-      currentProgram.uProjectionMatrix,
-      false,
-      projectionMatrix
-    );
   }
 }

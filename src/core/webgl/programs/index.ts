@@ -1,3 +1,2 @@
-export * from './variants';
 export * from './current-program';
-export * from './program';
+export * from './main-program';

@@ -18,29 +18,32 @@ varying vec4 vLightPVMVertex;
 varying vec3 vNormal;
 varying vec2 vTexture;
 
-float calculateShadow(vec4 lightPVMVertex) {
+bool inShadow(vec4 lightPVMVertex) {
   vec3 projCoords = lightPVMVertex.xyz / lightPVMVertex.w;
   projCoords = projCoords * 0.5 + 0.5;
   if(projCoords.z > 1.0)
-    return 1.0;
+    return false;
   float closestDepth = texture2D(uShadowMap, projCoords.xy).r;
   float bias = 0.005;
   float currentDepth = projCoords.z;
-  return currentDepth - bias > closestDepth ? 0.5 : 1.0;
+  return currentDepth - bias > closestDepth ? true : false;
 }
 
 vec3 calculateReflection(vec3 baseColor) {
+  vec3 ambientColor = uLight.ambient * baseColor;
+
+  if(inShadow(vLightPVMVertex)) {
+    return ambientColor;
+  }
+
   vec3 normal = normalize(vNormal);
   vec3 lightDir = normalize(uLight.position - vVertex.xyz);
   vec3 viewDir = normalize(-vVertex.xyz);
 
-  vec3 ambientColor = uLight.ambient * baseColor;
   vec3 diffuseColor = max(dot(normal, lightDir), 0.0) * baseColor;
   vec3 specularColor = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), uLight.shininess) * vec3(uLight.color);
 
-  float shadow = calculateShadow(vLightPVMVertex);
-
-  return ambientColor + diffuseColor * shadow + specularColor;
+  return ambientColor + diffuseColor + specularColor;
 }
 
 void main() {

@@ -1,10 +1,10 @@
-import { gl } from '../../context';
-import { Program } from '../program';
+import { gl } from '../context';
+import { Program } from './program';
 
-export class FirstProgram extends Program {
+export class MainProgram extends Program {
   public async init(): Promise<void> {
-    const vsPath = '/src/core/webgl/shaders/vertex.glsl';
-    const fsPath = '/src/core/webgl/shaders/fragment.glsl';
+    const vsPath = '/src/core/webgl/shaders/base/vertex.glsl';
+    const fsPath = '/src/core/webgl/shaders/base/fragment.glsl';
 
     this.program = await this.setProgram(vsPath, fsPath);
 
@@ -65,6 +65,14 @@ export class FirstProgram extends Program {
       this.program,
       'uLight.ambient'
     );
+    this.locations.uniforms.uLightViewProjectionMatrix = gl.getUniformLocation(
+      this.program,
+      'uLightViewProjectionMatrix'
+    );
+    this.locations.uniforms.uShadowMap = gl.getUniformLocation(
+      this.program,
+      'uShadowMap'
+    );
   }
 
   public isReady(): boolean {
@@ -83,7 +91,9 @@ export class FirstProgram extends Program {
       !!this.uLightPosition &&
       !!this.uLightColor &&
       !!this.uLightShininess &&
-      !!this.uLightAmbient
+      !!this.uLightAmbient &&
+      !!this.uLightViewProjectionMatrix &&
+      !!this.uShadowMap
     );
   }
 
@@ -129,5 +139,11 @@ export class FirstProgram extends Program {
   }
   get uLightAmbient(): WebGLUniformLocation | null {
     return this.locations.uniforms.uLightAmbient;
+  }
+  get uLightViewProjectionMatrix(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uLightViewProjectionMatrix;
+  }
+  get uShadowMap(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uShadowMap;
   }
 }

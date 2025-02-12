@@ -14,6 +14,15 @@ export abstract class Program {
 
   public abstract isReady(): boolean;
 
+  public use(): void {
+    if (!this.program) throw new Error('Program is not initialized');
+    gl.useProgram(this.program);
+  }
+
+  public get isActive(): boolean {
+    return gl.getParameter(gl.CURRENT_PROGRAM) === this.program;
+  }
+
   protected async setProgram(
     vsPath: string,
     fsPath: string
@@ -35,8 +44,6 @@ export abstract class Program {
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
       throw new Error('Unable to initialize shader program');
     }
-
-    gl.useProgram(shaderProgram);
 
     return shaderProgram;
   }

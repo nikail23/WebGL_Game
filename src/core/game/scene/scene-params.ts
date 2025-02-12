@@ -3,9 +3,13 @@ import { Model3D } from '../model';
 import { UpdateStrategy } from '../update-strategies';
 
 export interface SceneParams {
-  camera?: {
-    position?: vec3;
-    rotation?: vec3;
+  camera: {
+    position: vec3;
+    rotation: vec3;
+    fov: number;
+    aspect: number;
+    near: number;
+    far: number;
   };
   models: Model3D[];
   objects: {
@@ -20,5 +24,15 @@ export interface SceneParams {
     shininess: number;
     ambient: number;
     position: vec3;
+    lookAt: vec3;
+    fovy: number;
+    aspect: number;
+    near: number;
+    far: number;
+  };
+  shadows: {
+    enabled: boolean;
+    width: number;
+    height: number;
   };
 }

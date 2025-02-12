@@ -1,3 +1,5 @@
-import { FirstProgram } from './variants/first-program';
+import { MainProgram } from './main-program';
+import { ShadowProgram } from './shadow-program';
 
-export const currentProgram = new FirstProgram();
+export const mainProgram = new MainProgram();
+export const shadowProgram = new ShadowProgram();
