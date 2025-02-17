@@ -79,8 +79,8 @@ export class Game {
       },
       shadows: {
         enabled: true,
-        width: 1024,
-        height: 1024,
+        width: 4096,
+        height: 4096,
       },
     });
 

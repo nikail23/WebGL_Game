@@ -11,11 +11,11 @@ uniform mat4 uLightViewProjectionMatrix;
 varying vec4 vVertex;
 varying vec3 vNormal;
 varying vec2 vTexture;
-varying vec4 vLightPVMVertex;
+varying vec4 vLightProjectedVertex;
 
 void main() {
   vVertex = uViewMatrix * uModelMatrix * aVertexPosition;
-  vLightPVMVertex = uLightViewProjectionMatrix * uModelMatrix * aVertexPosition;
+  vLightProjectedVertex = uLightViewProjectionMatrix * uModelMatrix * aVertexPosition;
 
   vNormal = normalize(uNormalMatrix * aNormal.xyz);
   vTexture = aTextureCoordinate;
