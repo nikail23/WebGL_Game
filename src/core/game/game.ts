@@ -4,6 +4,7 @@ import { Crosshair } from '../hud/crosshair';
 import { aspect, canvas, gl } from '../webgl';
 import { Scene } from './scene/scene';
 import { Model3D } from './model';
+import { FpsCounter } from '../hud/fps';
 
 export class Game {
   private lastTime: number;
@@ -88,6 +89,7 @@ export class Game {
 
     this.hud = new HUD();
     this.hud.addElement(new Crosshair());
+    this.hud.addElement(new FpsCounter());
   }
 
   private async initWebGL(): Promise<void> {

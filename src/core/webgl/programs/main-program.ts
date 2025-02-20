@@ -73,6 +73,14 @@ export class MainProgram extends Program {
       this.program,
       'uShadowMap'
     );
+    this.locations.uniforms.uShadowMapSize = gl.getUniformLocation(
+      this.program,
+      'uShadowMapSize'
+    );
+    this.locations.uniforms.uHasShadows = gl.getUniformLocation(
+      this.program,
+      'uHasShadows'
+    );
   }
 
   public isReady(): boolean {
@@ -93,7 +101,9 @@ export class MainProgram extends Program {
       !!this.uLightShininess &&
       !!this.uLightAmbient &&
       !!this.uLightViewProjectionMatrix &&
-      !!this.uShadowMap
+      !!this.uShadowMap &&
+      !!this.uShadowMapSize &&
+      !!this.uHasShadows
     );
   }
 
@@ -145,5 +155,11 @@ export class MainProgram extends Program {
   }
   get uShadowMap(): WebGLUniformLocation | null {
     return this.locations.uniforms.uShadowMap;
+  }
+  get uShadowMapSize(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uShadowMapSize;
+  }
+  get uHasShadows(): WebGLUniformLocation | null {
+    return this.locations.uniforms.uHasShadows;
   }
 }

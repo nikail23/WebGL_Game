@@ -5,6 +5,7 @@ import { Object3D } from '../object';
 import { SceneData } from './scene-data';
 import { SceneParams } from './scene-params';
 import { gl, mainProgram, shadowProgram } from '../../webgl';
+import { vec2 } from 'gl-matrix';
 
 export class Scene {
   private _camera: Camera;
@@ -12,7 +13,7 @@ export class Scene {
   private _objects: Object3D[] = [];
   private _light: Light | null = null;
 
-  private _shadowMapData: {
+  private _shadowMapFrameBufferData: {
     frameBuffer: WebGLFramebuffer | null;
     colorTexture: WebGLTexture | null;
     depthTexture: WebGLTexture | null;
@@ -20,6 +21,7 @@ export class Scene {
     height: number;
   } | null = null;
   private _shadowsEnabled: boolean;
+  private _staticShadowMap: WebGLTexture | null = null;
 
   constructor(params: SceneParams) {
     this._camera = new Camera(
@@ -72,32 +74,33 @@ export class Scene {
 
     this._shadowsEnabled = params.shadows.enabled;
     if (this._shadowsEnabled) {
-      this._shadowMapData = this._createFrameBufferObject(
+      this._shadowMapFrameBufferData = this._createFrameBufferObject(
         params.shadows?.width ?? 1024,
         params.shadows?.height ?? 1024
       );
+
+      this._shadowsEnabled = !!this._shadowMapFrameBufferData && !!this._light;
     }
   }
 
   public async render(): Promise<void> {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (this._camera) {
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    gl.uniformMatrix4fv(
-      mainProgram.uProjectionMatrix,
-      false,
-      this._camera.projectionMatrix
-    );
-
-    let shadowMap: WebGLTexture | null = null;
-
-    if (this._shadowsEnabled && this._shadowMapData) {
-      shadowMap = await this._renderShadowMap(
-        this._shadowMapData.width,
-        this._shadowMapData.width
+      gl.uniformMatrix4fv(
+        mainProgram.uProjectionMatrix,
+        false,
+        this._camera.projectionMatrix
       );
-    }
 
-    await this._renderScene(shadowMap);
+      gl.uniform1f(mainProgram.uHasShadows, this._shadowsEnabled ? 1 : 0);
+
+      if (this._shadowsEnabled) {
+        await this._prepareShadows();
+      }
+
+      await this._renderScene();
+    }
   }
 
   public update(deltaTime: number): void {
@@ -110,6 +113,33 @@ export class Scene {
 
   private async _loadModels(): Promise<void> {
     await Promise.all(this._models.map((model) => model.load()));
+  }
+
+  private async _prepareShadows(): Promise<void> {
+    const data = this._shadowMapFrameBufferData!;
+    const light = this._light!;
+
+    if (!this._staticShadowMap) {
+      this._staticShadowMap = await this._renderStaticShadowMap(
+        data.width,
+        data.height
+      );
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
+      gl.uniform1i(mainProgram.uShadowMap, 1);
+    }
+
+    gl.uniformMatrix4fv(
+      mainProgram.uLightViewProjectionMatrix,
+      false,
+      light.getLightViewProjectionMatrix()
+    );
+
+    gl.uniform2fv(
+      mainProgram.uShadowMapSize,
+      vec2.fromValues(data.width, data.height)
+    );
   }
 
   private _createFrameBufferObject(width: number, height: number) {
@@ -225,7 +255,7 @@ export class Scene {
     };
   }
 
-  private async _renderShadowMap(
+  private async _renderStaticShadowMap(
     width: number,
     height: number
   ): Promise<WebGLTexture | null> {
@@ -234,14 +264,17 @@ export class Scene {
       return null;
     }
 
-    if (!this._shadowMapData) {
+    if (!this._shadowMapFrameBufferData) {
       console.warn('GAME_renderShadowMap: Shadow map data is not initialized!');
       return null;
     }
 
     shadowProgram.use();
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._shadowMapData.frameBuffer);
+    gl.bindFramebuffer(
+      gl.FRAMEBUFFER,
+      this._shadowMapFrameBufferData.frameBuffer
+    );
     gl.viewport(0, 0, width, height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -263,28 +296,15 @@ export class Scene {
 
     mainProgram.use();
 
-    return this._shadowMapData?.depthTexture ?? null;
+    return this._shadowMapFrameBufferData?.depthTexture ?? null;
   }
 
-  private async _renderScene(shadowMap: WebGLTexture | null): Promise<void> {
+  private async _renderScene(): Promise<void> {
     gl.uniformMatrix4fv(
       mainProgram.uViewMatrix,
       false,
       this._camera.viewMatrix
     );
-
-    if (this._light && shadowMap) {
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, shadowMap);
-      gl.uniform1i(mainProgram.uShadowMap, 1);
-
-      const lightViewProjMatrix = this._light.getLightViewProjectionMatrix();
-      gl.uniformMatrix4fv(
-        mainProgram.uLightViewProjectionMatrix,
-        false,
-        lightViewProjMatrix
-      );
-    }
 
     this._light?.prepareToRender(this._camera.viewMatrix);
 

@@ -11,7 +11,9 @@ uniform float uHasTexture;
 uniform sampler2D uSampler;
 uniform vec4 uColor;
 uniform Light uLight;
+uniform float uHasShadows;
 uniform sampler2D uShadowMap;
+uniform vec2 uShadowMapSize;
 
 varying vec4 vVertex;
 varying vec4 vLightProjectedVertex;
@@ -33,11 +35,30 @@ float getCurrentDepth() {
   return getProjectionCoordinates().z;
 }
 
-float getShadow(float bias) {
+float getOffsetDepth(vec2 offset, vec2 texelSize) {
+  vec3 projCoords = getProjectionCoordinates();
+  return texture2D(uShadowMap, projCoords.xy + offset * texelSize).r;
+}
+
+float getBaseShadow(float bias) {
   float currentDepth = getCurrentDepth();
   float closestDepth = getClosestDepth();
 
   return currentDepth < 1.0 && currentDepth - bias > closestDepth ? 0.0 : 1.0;
+}
+
+float getPCFShadow(float bias) {
+  float currentDepth = getCurrentDepth();
+  vec2 texelSize = vec2(1.0 / uShadowMapSize.x, 1.0 / uShadowMapSize.y);
+
+  float shadow = 0.0;
+  for(int x = -2; x <= 2; ++x) {
+    for(int y = -2; y <= 2; ++y) {
+      float offsetDepth = getOffsetDepth(vec2(float(x), float(y)), texelSize);
+      shadow += currentDepth < 1.0 && (currentDepth - bias > offsetDepth) ? 0.0 : 1.0;
+    }
+  }
+  return shadow /= 25.0;
 }
 
 vec3 calculateReflection(vec3 baseColor) {
@@ -47,7 +68,7 @@ vec3 calculateReflection(vec3 baseColor) {
   vec3 lightDir = normalize(uLight.position - vVertex.xyz);
   float bias = max(0.0005 * (1.0 - dot(vNormal, lightDir)), 0.00005);
 
-  float shadowFactor = getShadow(bias);
+  float shadowFactor = mix(1.0, getPCFShadow(bias), uHasShadows);
 
   vec3 viewDir = normalize(-vVertex.xyz);
 
