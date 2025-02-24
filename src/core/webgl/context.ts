@@ -3,21 +3,12 @@ if (!canvas) {
   throw new Error('Canvas element not found');
 }
 
-export const gl = canvas.getContext('webgl') as WebGLRenderingContext;
+export const gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
 if (!gl) {
   throw new Error('WebGL not supported');
 }
 
 export const aspect = canvas.clientWidth / canvas.clientHeight;
-
-export const depthTextureExtension = gl.getExtension('WEBGL_depth_texture');
-if (!depthTextureExtension) {
-  console.error(
-    'This WebGL program requires the use ' +
-      'of the WEBGL_depth_texture extension. This extension is not supported ' +
-      'by your browser, so this WebGL program is terminating.'
-  );
-}
 
 export const anisotropicFilteringExtension = gl.getExtension(
   'EXT_texture_filter_anisotropic'
