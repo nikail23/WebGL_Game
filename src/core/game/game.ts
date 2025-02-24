@@ -1,10 +1,10 @@
-import { vec3, vec4 } from 'gl-matrix';
 import { HUD } from '../hud/hud';
 import { Crosshair } from '../hud/crosshair';
 import { aspect, canvas, gl } from '../webgl';
 import { Scene } from './scene/scene';
-import { Model3D } from './model';
 import { FpsCounter } from '../hud/fps';
+import { vec3, vec4 } from 'gl-matrix';
+import { Model3D } from './model';
 
 export class Game {
   private lastTime: number;
@@ -12,7 +12,28 @@ export class Game {
   private scene: Scene;
 
   constructor() {
-    this.scene = new Scene({
+    this.scene = new Scene();
+    this.lastTime = 0;
+    this.hud = new HUD();
+    this.hud.addElement(new Crosshair());
+    this.hud.addElement(new FpsCounter());
+  }
+
+  private async initWebGL(): Promise<void> {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
+
+  private initListeners(): void {
+    canvas.addEventListener('click', () => {
+      canvas.requestPointerLock();
+    });
+  }
+
+  private async initScene(): Promise<void> {
+    this.scene.init({
       camera: {
         position: vec3.fromValues(0, 2, 6),
         rotation: vec3.fromValues(0, 0, 0),
@@ -89,30 +110,12 @@ export class Game {
         height: 4096,
       },
     });
-
-    this.lastTime = 0;
-
-    this.hud = new HUD();
-    this.hud.addElement(new Crosshair());
-    this.hud.addElement(new FpsCounter());
-  }
-
-  private async initWebGL(): Promise<void> {
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  }
-
-  private initListeners(): void {
-    canvas.addEventListener('click', () => {
-      canvas.requestPointerLock();
-    });
   }
 
   private async initGame(): Promise<void> {
     await this.initWebGL();
     this.initListeners();
+    await this.initScene();
   }
 
   public async start(): Promise<void> {

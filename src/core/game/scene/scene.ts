@@ -8,7 +8,7 @@ import { gl, mainProgram, shadowProgram } from '../../webgl';
 import { vec2 } from 'gl-matrix';
 
 export class Scene {
-  private _camera: Camera;
+  private _camera: Camera | null = null;
   private _models: Model3D[] = [];
   private _objects: Object3D[] = [];
   private _light: Light | null = null;
@@ -20,10 +20,10 @@ export class Scene {
     width: number;
     height: number;
   } | null = null;
-  private _shadowsEnabled: boolean;
+  private _shadowsEnabled = false;
   private _staticShadowMap: WebGLTexture | null = null;
 
-  constructor(params: SceneParams) {
+  public async init(params: SceneParams): Promise<void> {
     this._camera = new Camera(
       params.camera.position,
       params.camera.rotation,
@@ -35,7 +35,7 @@ export class Scene {
 
     this._models = params.models ?? [];
     if (this._models.length) {
-      this._loadModels();
+      await this._loadModels();
     }
 
     params.objects.forEach((objectParams) => {
@@ -109,13 +109,15 @@ export class Scene {
   public update(deltaTime: number): void {
     const sceneData = this._getSceneData();
 
-    this._camera.update(deltaTime, sceneData);
+    this._camera?.update(deltaTime, sceneData);
 
     this._objects.forEach((object) => object.update(deltaTime, sceneData));
   }
 
   private async _loadModels(): Promise<void> {
-    await Promise.all(this._models.map((model) => model.load()));
+    for (const model of this._models) {
+      await model.load();
+    }
   }
 
   private async _prepareShadows(): Promise<void> {
@@ -305,14 +307,16 @@ export class Scene {
   }
 
   private async _renderScene(): Promise<void> {
-    const uViewMatrix = mainProgram.getUniform('uViewMatrix');
+    if (this._camera) {
+      const uViewMatrix = mainProgram.getUniform('uViewMatrix');
 
-    gl.uniformMatrix4fv(uViewMatrix, false, this._camera.viewMatrix);
+      gl.uniformMatrix4fv(uViewMatrix, false, this._camera.viewMatrix);
 
-    this._light?.prepareToRender(this._camera.viewMatrix);
+      this._light?.prepareToRender(this._camera.viewMatrix);
 
-    for (const object of this._objects) {
-      await object.render(this._camera.viewMatrix);
+      for (const object of this._objects) {
+        await object.render(this._camera.viewMatrix);
+      }
     }
   }
 
