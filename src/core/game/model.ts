@@ -1,6 +1,6 @@
 import { vec4 } from 'gl-matrix';
 import { MeshWithBuffers, OBJ } from 'webgl-obj-loader';
-import { gl } from '../webgl';
+import { anisotropicFilteringExtension, gl } from '../webgl';
 import { mainProgram, shadowProgram } from '../webgl/programs/current-program';
 
 export class Model3D {
@@ -166,6 +166,16 @@ export class Model3D {
   ): void {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    if (anisotropicFilteringExtension) {
+      const maxAnisotropy = gl.getParameter(
+        anisotropicFilteringExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT
+      );
+      gl.texParameteri(
+        gl.TEXTURE_2D,
+        anisotropicFilteringExtension.TEXTURE_MAX_ANISOTROPY_EXT,
+        maxAnisotropy
+      );
+    }
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(
