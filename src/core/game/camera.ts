@@ -11,7 +11,14 @@ export class Camera extends Object3D {
     public near: number,
     public far: number
   ) {
-    super(position, rotation, undefined, undefined, new CameraStrategy());
+    super(
+      position,
+      rotation,
+      undefined,
+      undefined,
+      undefined,
+      new CameraStrategy()
+    );
   }
 
   public get viewMatrix(): mat4 {

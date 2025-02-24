@@ -43,54 +43,56 @@ export class Model3D {
       return 0;
     }
 
-    if (mainProgram.aVertexPosition !== null) {
-      gl.enableVertexAttribArray(mainProgram.aVertexPosition);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
-      gl.vertexAttribPointer(
-        mainProgram.aVertexPosition,
-        this._mesh.vertexBuffer.itemSize,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
-    }
+    const aVertexPosition = mainProgram.getAttribute('aVertexPosition');
+    const aNormal = mainProgram.getAttribute('aNormal');
+    const aTextureCoordinate = mainProgram.getAttribute('aTextureCoordinate');
 
-    if (mainProgram.aNormal !== null) {
-      gl.enableVertexAttribArray(mainProgram.aNormal);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.normalBuffer);
-      gl.vertexAttribPointer(
-        mainProgram.aNormal,
-        this._mesh.normalBuffer.itemSize,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
-    }
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
+    gl.vertexAttribPointer(
+      aVertexPosition,
+      this._mesh.vertexBuffer.itemSize,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
 
-    if (mainProgram.aTextureCoordinate !== null) {
-      gl.enableVertexAttribArray(mainProgram.aTextureCoordinate);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
-      gl.vertexAttribPointer(
-        mainProgram.aTextureCoordinate,
-        this._mesh.textureBuffer.itemSize,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
-    }
+    gl.enableVertexAttribArray(aNormal);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.normalBuffer);
+    gl.vertexAttribPointer(
+      aNormal,
+      this._mesh.normalBuffer.itemSize,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+
+    gl.enableVertexAttribArray(aTextureCoordinate);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.textureBuffer);
+    gl.vertexAttribPointer(
+      aTextureCoordinate,
+      this._mesh.textureBuffer.itemSize,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+
+    const uSampler = mainProgram.getUniform('uSampler');
+    const uHasTexture = mainProgram.getUniform('uHasTexture');
+    const uColor = mainProgram.getUniform('uColor');
 
     if (this._mesh.textures?.length) {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this._texture);
-      gl.uniform1i(mainProgram.uSampler, 0);
-      gl.uniform1f(mainProgram.uHasTexture, 1);
+      gl.uniform1i(uSampler, 0);
+      gl.uniform1f(uHasTexture, 1);
     } else {
-      gl.uniform1f(mainProgram.uHasTexture, 0);
+      gl.uniform1f(uHasTexture, 0);
       gl.uniform4fv(
-        mainProgram.uColor,
+        uColor,
         new Float32Array([
           this._defaultColor[0],
           this._defaultColor[1],
@@ -116,19 +118,17 @@ export class Model3D {
       return 0;
     }
 
-    if (shadowProgram.aVertexPosition !== null) {
-      gl.enableVertexAttribArray(shadowProgram.aVertexPosition);
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
-      gl.vertexAttribPointer(
-        shadowProgram.aVertexPosition,
-        this._mesh.vertexBuffer.itemSize,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
-    }
-
+    const aVertexPosition = shadowProgram.getAttribute('aVertexPosition');
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._mesh.vertexBuffer);
+    gl.vertexAttribPointer(
+      aVertexPosition,
+      this._mesh.vertexBuffer.itemSize,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._mesh.indexBuffer);
 
     return this.indices;
@@ -183,8 +183,8 @@ export class Model3D {
       gl.TEXTURE_MIN_FILTER,
       gl.LINEAR_MIPMAP_LINEAR
     );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.generateMipmap(gl.TEXTURE_2D);
 
     gl.bindTexture(gl.TEXTURE_2D, null);

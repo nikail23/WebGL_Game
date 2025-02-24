@@ -28,19 +28,21 @@ export class Light extends Object3D {
       const viewPosition = vec4.create();
       vec4.transformMat4(viewPosition, position, viewMatrix);
 
+      const uLightPosition = mainProgram.getUniform('uLight.position');
+      const uLightColor = mainProgram.getUniform('uLight.color');
+      const uLightShininess = mainProgram.getUniform('uLight.shininess');
+      const uLightAmbient = mainProgram.getUniform('uLight.ambient');
+
       gl.uniform3fv(
-        mainProgram.uLightPosition,
+        uLightPosition,
         new Float32Array([viewPosition[0], viewPosition[1], viewPosition[2]])
       );
-
       gl.uniform3fv(
-        mainProgram.uLightColor,
+        uLightColor,
         new Float32Array([this.color[0], this.color[1], this.color[2]])
       );
-
-      gl.uniform1f(mainProgram.uLightShininess, this.shininess);
-
-      gl.uniform1f(mainProgram.uLightAmbient, this.ambient);
+      gl.uniform1f(uLightShininess, this.shininess);
+      gl.uniform1f(uLightAmbient, this.ambient);
     }
   }
 

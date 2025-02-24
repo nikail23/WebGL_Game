@@ -16,6 +16,7 @@ export interface SceneParams {
     position: vec3;
     rotation: vec3;
     scale: vec3;
+    textureScale: number;
     model: string;
     strategy?: UpdateStrategy;
   }[];

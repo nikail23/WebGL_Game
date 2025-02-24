@@ -10,6 +10,7 @@ uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform mat3 uNormalMatrix;
 uniform mat4 uLightViewProjectionMatrix;
+uniform float uTextureScale;
 
 out vec4 vVertex;
 out vec3 vNormal;
@@ -21,7 +22,7 @@ void main() {
   vLightProjectedVertex = uLightViewProjectionMatrix * uModelMatrix * aVertexPosition;
 
   vNormal = normalize(uNormalMatrix * aNormal.xyz);
-  vTexture = aTextureCoordinate;
+  vTexture = aTextureCoordinate * uTextureScale;
 
   gl_Position = uProjectionMatrix * vVertex;
 }

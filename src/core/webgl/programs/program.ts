@@ -10,17 +10,69 @@ export abstract class Program {
     uniforms: {},
   };
 
-  public abstract init(): Promise<void>;
+  public get isActive(): boolean {
+    return gl.getParameter(gl.CURRENT_PROGRAM) === this.program;
+  }
 
-  public abstract isReady(): boolean;
+  public get status() {
+    const attributesStatus = Object.entries(this.locations.attributes).reduce(
+      (acc, [key, location]) => {
+        acc[key] = location !== undefined && location !== -1;
+        return acc;
+      },
+      {} as { [key: string]: boolean }
+    );
+
+    const uniformsStatus = Object.entries(this.locations.uniforms).reduce(
+      (acc, [key, location]) => {
+        acc[key] = Boolean(location);
+        return acc;
+      },
+      {} as { [key: string]: boolean }
+    );
+
+    return {
+      attributes: attributesStatus,
+      uniforms: uniformsStatus,
+    };
+  }
+
+  public abstract init(): Promise<void>;
 
   public use(): void {
     if (!this.program) throw new Error('Program is not initialized');
     gl.useProgram(this.program);
   }
 
-  public get isActive(): boolean {
-    return gl.getParameter(gl.CURRENT_PROGRAM) === this.program;
+  public getAttribute(name: string): number {
+    const location = this.locations.attributes[name];
+    if (location === undefined || location === -1) {
+      throw new Error(`Attribute ${name} is not found`);
+    }
+    return location;
+  }
+
+  public getUniform(name: string): WebGLUniformLocation {
+    const location = this.locations.uniforms[name];
+    if (!location) {
+      throw new Error(`Uniform ${name} is not found`);
+    }
+    return location;
+  }
+
+  protected addAttribute(name: string): void {
+    if (this.program) {
+      this.locations.attributes[name] = gl.getAttribLocation(
+        this.program,
+        name
+      );
+    }
+  }
+
+  protected addUniform(name: string): void {
+    if (this.program) {
+      this.locations.uniforms[name] = gl.getUniformLocation(this.program, name);
+    }
   }
 
   protected async setProgram(

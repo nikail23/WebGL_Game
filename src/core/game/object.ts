@@ -12,6 +12,7 @@ export class Object3D {
     public position = vec3.create(),
     public rotation = vec3.create(),
     public scale = vec3.create(),
+    public textureScale = 1,
     model?: Model3D,
     updateStrategy?: UpdateStrategy
   ) {
@@ -48,8 +49,13 @@ export class Object3D {
     mat4.multiply(viewModelMatrix, viewMatrix, modelMatrix);
     mat3.normalFromMat4(normalMatrix, viewModelMatrix);
 
-    gl.uniformMatrix4fv(mainProgram.uModelMatrix, false, modelMatrix);
-    gl.uniformMatrix3fv(mainProgram.uNormalMatrix, false, normalMatrix);
+    const uModelMatrix = mainProgram.getUniform('uModelMatrix');
+    const uNormalMatrix = mainProgram.getUniform('uNormalMatrix');
+    const uTextureScale = mainProgram.getUniform('uTextureScale');
+
+    gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
+    gl.uniformMatrix3fv(uNormalMatrix, false, normalMatrix);
+    gl.uniform1f(uTextureScale, this.textureScale);
 
     gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_SHORT, 0);
   }
@@ -69,7 +75,9 @@ export class Object3D {
 
     const modelMatrix = this._getModelMatrix();
 
-    gl.uniformMatrix4fv(shadowProgram.uModelMatrix, false, modelMatrix);
+    const uModelMatrix = shadowProgram.getUniform('uModelMatrix');
+
+    gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 
     gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_SHORT, 0);
   }

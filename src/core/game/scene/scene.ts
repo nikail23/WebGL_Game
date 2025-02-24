@@ -52,6 +52,7 @@ export class Scene {
           objectParams.position,
           objectParams.rotation,
           objectParams.scale,
+          objectParams.textureScale,
           model,
           objectParams.strategy
         )
@@ -87,13 +88,15 @@ export class Scene {
     if (this._camera) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+      const uProjectionMatrix = mainProgram.getUniform('uProjectionMatrix');
+      const uHasShadows = mainProgram.getUniform('uHasShadows');
+
       gl.uniformMatrix4fv(
-        mainProgram.uProjectionMatrix,
+        uProjectionMatrix,
         false,
         this._camera.projectionMatrix
       );
-
-      gl.uniform1f(mainProgram.uHasShadows, this._shadowsEnabled ? 1 : 0);
+      gl.uniform1f(uHasShadows, this._shadowsEnabled ? 1 : 0);
 
       if (this._shadowsEnabled) {
         await this._prepareShadows();
@@ -125,21 +128,24 @@ export class Scene {
         data.height
       );
 
+      const uShadowMap = mainProgram.getUniform('uShadowMap');
+
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
-      gl.uniform1i(mainProgram.uShadowMap, 1);
+      gl.uniform1i(uShadowMap, 1);
     }
 
+    const uLightViewProjectionMatrix = mainProgram.getUniform(
+      'uLightViewProjectionMatrix'
+    );
+    const uShadowMapSize = mainProgram.getUniform('uShadowMapSize');
+
     gl.uniformMatrix4fv(
-      mainProgram.uLightViewProjectionMatrix,
+      uLightViewProjectionMatrix,
       false,
       light.getLightViewProjectionMatrix()
     );
-
-    gl.uniform2fv(
-      mainProgram.uShadowMapSize,
-      vec2.fromValues(data.width, data.height)
-    );
+    gl.uniform2fv(uShadowMapSize, vec2.fromValues(data.width, data.height));
   }
 
   private _createFrameBufferObject(width: number, height: number) {
@@ -279,11 +285,10 @@ export class Scene {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const lightViewProjMatrix = this._light.getLightViewProjectionMatrix();
-    gl.uniformMatrix4fv(
-      shadowProgram.uLightViewProjectionMatrix,
-      false,
-      lightViewProjMatrix
+    const uLightViewProjectionMatrix = shadowProgram.getUniform(
+      'uLightViewProjectionMatrix'
     );
+    gl.uniformMatrix4fv(uLightViewProjectionMatrix, false, lightViewProjMatrix);
 
     for (const object of this._objects) {
       await object.renderShadow();
@@ -300,11 +305,9 @@ export class Scene {
   }
 
   private async _renderScene(): Promise<void> {
-    gl.uniformMatrix4fv(
-      mainProgram.uViewMatrix,
-      false,
-      this._camera.viewMatrix
-    );
+    const uViewMatrix = mainProgram.getUniform('uViewMatrix');
+
+    gl.uniformMatrix4fv(uViewMatrix, false, this._camera.viewMatrix);
 
     this._light?.prepareToRender(this._camera.viewMatrix);
 
