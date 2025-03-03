@@ -7,6 +7,7 @@ export class Camera extends Object3D {
   public fov: number = Math.PI / 4;
   public near: number = 0.1;
   public far: number = 100;
+  public visible = false;
 
   public get viewMatrix(): mat4 {
     const viewMatrix = mat4.create();

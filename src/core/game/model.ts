@@ -9,7 +9,13 @@ export interface Mesh3DBuffers {
 }
 
 export class Mesh3D extends Mesh {
-  public defaultColor = vec4.fromValues(1, 1, 1, 1);
+  public baseColor = vec4.fromValues(
+    Math.random(),
+    Math.random(),
+    Math.random(),
+    1
+  );
+  public baseColorValue = 1;
   public texture: WebGLTexture | null = null;
   public buffers: Mesh3DBuffers = {
     normalBuffer: { itemSize: 0, numItems: 0 },

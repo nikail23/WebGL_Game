@@ -19,13 +19,13 @@ import {
 } from '../../webgl';
 import { mat3, mat4, vec2, vec4 } from 'gl-matrix';
 import { ExtendedGLBuffer, Mesh } from 'webgl-obj-loader';
-import { PhysicleObject3D } from '../mesh';
 import { CameraStrategy } from '../update-strategies';
+import { Object3D } from '../object';
 
 export class Scene {
   private _camera: Camera = new Camera();
   private _meshes: Mesh3D[] = [];
-  private _objects: PhysicleObject3D[] = [];
+  private _objects: Object3D[] = [];
   private _light: Light3D | null = null;
 
   private _shadowMapFrameBufferData: {
@@ -115,7 +115,7 @@ export class Scene {
       }
     });
 
-    console.log('Scene objects:', this._objects);
+    console.log('Scene objects:', this._light);
   }
 
   private _buildCamera(p: SceneCameraParams): Camera {
@@ -130,16 +130,14 @@ export class Scene {
     return camera;
   }
 
-  private _buildPhysicalObject(
-    p: ScenePhysiscleObjectParams
-  ): PhysicleObject3D {
+  private _buildPhysicalObject(p: ScenePhysiscleObjectParams): Object3D {
     const mesh = this._meshes.find((model) => model.name === p.model);
 
     if (!mesh) {
       throw new Error(`Mesh ${p.model} not found`);
     }
 
-    const object = new PhysicleObject3D();
+    const object = new Object3D();
     object.position = p.position;
     object.rotation = p.rotation;
     object.scale = p.scale;
@@ -151,6 +149,12 @@ export class Scene {
   }
 
   private _buildLight(p: SceneLightParams): Light3D {
+    const mesh = this._meshes.find((model) => model.name === p.model);
+
+    if (!mesh) {
+      throw new Error(`Mesh ${p.model} not found`);
+    }
+
     const light = new Light3D();
     light.color = p.color;
     light.shininess = p.shininess;
@@ -160,6 +164,12 @@ export class Scene {
     light.fovy = p.fovy;
     light.aspect = p.aspect;
     light.near = p.near;
+    light.far = p.far;
+    light.mesh = mesh;
+    light.textureScale = p.textureScale;
+    light.rotation = p.rotation;
+    light.scale = p.scale;
+
     return light;
   }
 
@@ -357,6 +367,7 @@ export class Scene {
 
       if (this._light) {
         this._prepareLight(this._light);
+        this._renderObject(this._light, 'base');
       }
 
       for (const object of this._objects) {
@@ -373,11 +384,10 @@ export class Scene {
   }
 
   private async _renderObject(
-    object: PhysicleObject3D,
+    object: Object3D,
     mode: 'base' | 'shadow'
   ): Promise<void> {
-    if (!object.mesh) {
-      console.warn('GAME_render: Mesh is not loaded!');
+    if (!object.mesh || !object.visible) {
       return;
     }
 
@@ -498,19 +508,14 @@ export class Scene {
         0
       );
 
-      const uSampler = mainProgram.getUniform('uSampler');
-      const uHasTexture = mainProgram.getUniform('uHasTexture');
-      const uColor = mainProgram.getUniform('uColor');
-
-      if (mesh.textures.length) {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
-        gl.uniform1i(uSampler, 0);
-        gl.uniform1f(uHasTexture, 1);
-      } else {
-        gl.uniform1f(uHasTexture, 0);
-        gl.uniform4fv(uColor, mesh.defaultColor);
-      }
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
+      gl.uniform1i(mainProgram.getUniform('uSampler'), mesh.baseColorValue);
+      gl.uniform1f(
+        mainProgram.getUniform('uBaseColorMix'),
+        1 - mesh.baseColorValue
+      );
+      gl.uniform4fv(mainProgram.getUniform('uBaseColor'), mesh.baseColor);
 
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.indexBuffer);
     } else if (mode === 'shadow') {

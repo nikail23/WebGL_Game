@@ -8,9 +8,9 @@ struct Light {
   float ambient;
 };
 
-uniform float uHasTexture;
 uniform sampler2D uSampler;
-uniform vec4 uColor;
+uniform vec4 uBaseColor;
+uniform float uBaseColorMix;
 uniform Light uLight;
 uniform float uHasShadows;
 uniform sampler2D uShadowMap;
@@ -78,7 +78,7 @@ vec3 calculateReflection(vec3 baseColor) {
 
 void main() {
   vec4 textureColor = texture(uSampler, vTexture);
-  vec4 baseColor = mix(uColor, textureColor, uHasTexture);
+  vec4 baseColor = mix(uBaseColor, textureColor, uBaseColorMix);
   vec3 totalColor = calculateReflection(baseColor.rgb);
   fragColor = vec4(totalColor, baseColor.a);
 }

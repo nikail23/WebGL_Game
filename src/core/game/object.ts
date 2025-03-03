@@ -1,13 +1,17 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { SceneData } from './scene';
 import { UpdateStrategy } from './update-strategies';
+import { Mesh3D } from './model';
 
-export abstract class Object3D {
-  public abstract type: string;
+export class Object3D {
+  public type = 'Object3D';
+  public visible = true;
   public position = vec3.create();
   public rotation = vec3.create();
   public scale = vec3.create();
   public updateStrategy: UpdateStrategy | null = null;
+  public mesh?: Mesh3D;
+  public textureScale = 1;
 
   public update(deltaTime: number, sceneData: SceneData): void {
     this.updateStrategy?.update(deltaTime, this, sceneData);

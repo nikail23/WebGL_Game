@@ -70,14 +70,6 @@ export class Game {
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
-          position: vec3.fromValues(2, -1, -2),
-          rotation: vec3.fromValues(0, 0, 0),
-          scale: vec3.fromValues(1, 1, 1),
-          textureScale: 1,
-          model: 'cube',
-        },
-        {
-          type: SceneObjectEnum.PHYSICAL_OBJECT,
           position: vec3.fromValues(-2, -1, -2),
           rotation: vec3.fromValues(0, 0, 0),
           scale: vec3.fromValues(1, 1, 1),
@@ -86,11 +78,11 @@ export class Game {
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
-          position: vec3.fromValues(0, 1, 0),
+          position: vec3.fromValues(2, -1, -2),
           rotation: vec3.fromValues(0, 0, 0),
-          scale: vec3.fromValues(0.001, 0.001, 0.001),
+          scale: vec3.fromValues(1, 1, 1),
           textureScale: 1,
-          model: 'light',
+          model: 'cube',
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
@@ -111,6 +103,10 @@ export class Game {
           aspect: 1,
           near: 0.1,
           far: 100,
+          model: 'light',
+          textureScale: 1,
+          scale: vec3.fromValues(0.001, 0.001, 0.001),
+          rotation: vec3.fromValues(0, 0, 0),
         },
         {
           type: SceneObjectEnum.CAMERA,

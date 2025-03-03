@@ -39,6 +39,10 @@ export interface SceneLightParams {
   aspect: number;
   near: number;
   far: number;
+  model: string;
+  textureScale: number;
+  rotation: vec3;
+  scale: vec3;
 }
 
 export interface SceneCameraParams {

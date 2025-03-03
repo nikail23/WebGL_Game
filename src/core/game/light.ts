@@ -3,6 +3,7 @@ import { mat4, vec3 } from 'gl-matrix';
 
 export class Light3D extends Object3D {
   public type = 'Light3D';
+  public visible = true;
   public shininess = 32;
   public color = vec3.fromValues(1, 1, 1);
   public ambient = 0.2;

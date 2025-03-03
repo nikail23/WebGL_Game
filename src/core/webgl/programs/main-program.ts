@@ -11,9 +11,9 @@ export class MainProgram extends Program {
     this.addAttribute('aTextureCoordinate');
     this.addAttribute('aNormal');
 
-    this.addUniform('uHasTexture');
+    this.addUniform('uBaseColorMix');
     this.addUniform('uSampler');
-    this.addUniform('uColor');
+    this.addUniform('uBaseColor');
     this.addUniform('uViewMatrix');
     this.addUniform('uModelMatrix');
     this.addUniform('uProjectionMatrix');
