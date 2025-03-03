@@ -1,17 +1,32 @@
 import { Camera } from '../camera';
-import { Light } from '../light';
-import { Model3D } from '../model';
-import { Object3D } from '../object';
+import { Light3D } from '../light';
+import { Mesh3D, Mesh3DBuffers } from '../model';
 import { SceneData } from './scene-data';
-import { SceneParams } from './scene-params';
-import { gl, mainProgram, shadowProgram } from '../../webgl';
-import { vec2 } from 'gl-matrix';
+import {
+  SceneCameraParams,
+  SceneLightParams,
+  SceneMeshParams,
+  SceneObjectEnum,
+  SceneObjectParams,
+  SceneParams,
+  ScenePhysiscleObjectParams,
+} from './scene-params';
+import {
+  anisotropicFilteringExtension,
+  gl,
+  mainProgram,
+  shadowProgram,
+} from '../../webgl';
+import { mat3, mat4, vec2, vec4 } from 'gl-matrix';
+import { ExtendedGLBuffer, Mesh } from 'webgl-obj-loader';
+import { PhysicleObject3D } from '../mesh';
+import { CameraStrategy } from '../update-strategies';
 
 export class Scene {
-  private _camera: Camera | null = null;
-  private _models: Model3D[] = [];
-  private _objects: Object3D[] = [];
-  private _light: Light | null = null;
+  private _camera: Camera = new Camera();
+  private _meshes: Mesh3D[] = [];
+  private _objects: PhysicleObject3D[] = [];
+  private _light: Light3D | null = null;
 
   private _shadowMapFrameBufferData: {
     frameBuffer: WebGLFramebuffer | null;
@@ -23,55 +38,14 @@ export class Scene {
   private _shadowsEnabled = false;
   private _staticShadowMap: WebGLTexture | null = null;
 
+  private get viewMatrix(): mat4 {
+    return this._camera.viewMatrix;
+  }
+
   public async init(params: SceneParams): Promise<void> {
-    this._camera = new Camera(
-      params.camera.position,
-      params.camera.rotation,
-      params.camera.aspect,
-      params.camera.fov,
-      params.camera.near,
-      params.camera.far
-    );
+    await this._loadMeshes(params.meshes);
 
-    this._models = params.models ?? [];
-    if (this._models.length) {
-      await this._loadModels();
-    }
-
-    params.objects.forEach((objectParams) => {
-      const model = this._models.find(
-        (model) => model.name === objectParams.model
-      );
-
-      if (!model) {
-        throw new Error(`Model ${objectParams.model} not found`);
-      }
-
-      this._objects.push(
-        new Object3D(
-          objectParams.position,
-          objectParams.rotation,
-          objectParams.scale,
-          objectParams.textureScale,
-          model,
-          objectParams.strategy
-        )
-      );
-    });
-
-    if (params.light) {
-      this._light = new Light(
-        params.light.position,
-        params.light.shininess,
-        params.light.color,
-        params.light.ambient,
-        params.light.lookAt,
-        params.light.fovy,
-        params.light.aspect,
-        params.light.near,
-        params.light.far
-      );
-    }
+    this._buildObjects(params.objects);
 
     this._shadowsEnabled = params.shadows.enabled;
     if (this._shadowsEnabled) {
@@ -87,16 +61,15 @@ export class Scene {
   public async render(): Promise<void> {
     if (this._camera) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-      const uProjectionMatrix = mainProgram.getUniform('uProjectionMatrix');
-      const uHasShadows = mainProgram.getUniform('uHasShadows');
-
       gl.uniformMatrix4fv(
-        uProjectionMatrix,
+        mainProgram.getUniform('uProjectionMatrix'),
         false,
         this._camera.projectionMatrix
       );
-      gl.uniform1f(uHasShadows, this._shadowsEnabled ? 1 : 0);
+      gl.uniform1f(
+        mainProgram.getUniform('uHasShadows'),
+        this._shadowsEnabled ? 1 : 0
+      );
 
       if (this._shadowsEnabled) {
         await this._prepareShadows();
@@ -109,15 +82,85 @@ export class Scene {
   public update(deltaTime: number): void {
     const sceneData = this._getSceneData();
 
-    this._camera?.update(deltaTime, sceneData);
+    this._camera.update(deltaTime, sceneData);
 
     this._objects.forEach((object) => object.update(deltaTime, sceneData));
   }
 
-  private async _loadModels(): Promise<void> {
-    for (const model of this._models) {
-      await model.load();
+  private async _loadMeshes(meshesParams: SceneMeshParams[]): Promise<void> {
+    this._meshes = [];
+
+    for (const params of meshesParams) {
+      const mesh = await this._loadMesh(params.objUrl, params.textureUrl);
+      mesh.name = params.name;
+      this._meshes.push(mesh);
     }
+  }
+
+  private _buildObjects(objectParams: SceneObjectParams[]): void {
+    this._objects = [];
+
+    objectParams.forEach((p) => {
+      switch (p.type) {
+        case SceneObjectEnum.PHYSICAL_OBJECT:
+          const object = this._buildPhysicalObject(p);
+          this._objects.push(object);
+          break;
+        case SceneObjectEnum.LIGHT:
+          this._light = this._buildLight(p);
+          break;
+        case SceneObjectEnum.CAMERA:
+          this._camera = this._buildCamera(p);
+          break;
+      }
+    });
+
+    console.log('Scene objects:', this._objects);
+  }
+
+  private _buildCamera(p: SceneCameraParams): Camera {
+    const camera = new Camera();
+    camera.position = p.position;
+    camera.rotation = p.rotation;
+    camera.aspect = p.aspect;
+    camera.fov = p.fov;
+    camera.near = p.near;
+    camera.far = p.far;
+    camera.updateStrategy = new CameraStrategy().init(camera);
+    return camera;
+  }
+
+  private _buildPhysicalObject(
+    p: ScenePhysiscleObjectParams
+  ): PhysicleObject3D {
+    const mesh = this._meshes.find((model) => model.name === p.model);
+
+    if (!mesh) {
+      throw new Error(`Mesh ${p.model} not found`);
+    }
+
+    const object = new PhysicleObject3D();
+    object.position = p.position;
+    object.rotation = p.rotation;
+    object.scale = p.scale;
+    object.textureScale = p.textureScale;
+    object.mesh = mesh;
+    if (p.strategy) object.updateStrategy = p.strategy;
+
+    return object;
+  }
+
+  private _buildLight(p: SceneLightParams): Light3D {
+    const light = new Light3D();
+    light.color = p.color;
+    light.shininess = p.shininess;
+    light.ambient = p.ambient;
+    light.position = p.position;
+    light.lookAt = p.lookAt;
+    light.fovy = p.fovy;
+    light.aspect = p.aspect;
+    light.near = p.near;
+    return light;
   }
 
   private async _prepareShadows(): Promise<void> {
@@ -293,7 +336,7 @@ export class Scene {
     gl.uniformMatrix4fv(uLightViewProjectionMatrix, false, lightViewProjMatrix);
 
     for (const object of this._objects) {
-      await object.renderShadow();
+      await this._renderObject(object, 'shadow');
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -310,12 +353,14 @@ export class Scene {
     if (this._camera) {
       const uViewMatrix = mainProgram.getUniform('uViewMatrix');
 
-      gl.uniformMatrix4fv(uViewMatrix, false, this._camera.viewMatrix);
+      gl.uniformMatrix4fv(uViewMatrix, false, this.viewMatrix);
 
-      this._light?.prepareToRender(this._camera.viewMatrix);
+      if (this._light) {
+        this._prepareLight(this._light);
+      }
 
       for (const object of this._objects) {
-        await object.render(this._camera.viewMatrix);
+        await this._renderObject(object, 'base');
       }
     }
   }
@@ -325,5 +370,251 @@ export class Scene {
       camera: this._camera,
       objects: this._objects,
     };
+  }
+
+  private async _renderObject(
+    object: PhysicleObject3D,
+    mode: 'base' | 'shadow'
+  ): Promise<void> {
+    if (!object.mesh) {
+      console.warn('GAME_render: Mesh is not loaded!');
+      return;
+    }
+
+    if (mode === 'base') {
+      this._prepareMesh(object.mesh, mode);
+      const normalMatrix = mat3.create();
+      const viewModelMatrix = mat4.create();
+      mat4.multiply(viewModelMatrix, this.viewMatrix, object.modelMatrix);
+      mat3.normalFromMat4(normalMatrix, viewModelMatrix);
+      gl.uniformMatrix4fv(
+        mainProgram.getUniform('uModelMatrix'),
+        false,
+        object.modelMatrix
+      );
+      gl.uniformMatrix3fv(
+        mainProgram.getUniform('uNormalMatrix'),
+        false,
+        normalMatrix
+      );
+      gl.uniform1f(
+        mainProgram.getUniform('uTextureScale'),
+        object.textureScale
+      );
+      gl.drawElements(
+        gl.TRIANGLES,
+        object.mesh.indices.length,
+        gl.UNSIGNED_SHORT,
+        0
+      );
+    } else if (mode === 'shadow') {
+      this._prepareMesh(object.mesh, mode);
+      gl.uniformMatrix4fv(
+        shadowProgram.getUniform('uModelMatrix'),
+        false,
+        object.modelMatrix
+      );
+      gl.drawElements(
+        gl.TRIANGLES,
+        object.mesh.indices.length,
+        gl.UNSIGNED_SHORT,
+        0
+      );
+    }
+  }
+
+  private _prepareLight(light: Light3D): void {
+    const position = vec4.fromValues(
+      light.position[0],
+      light.position[1],
+      light.position[2],
+      1
+    );
+    const viewPosition = vec4.create();
+    vec4.transformMat4(viewPosition, position, this.viewMatrix);
+
+    const uLightPosition = mainProgram.getUniform('uLight.position');
+    const uLightColor = mainProgram.getUniform('uLight.color');
+    const uLightShininess = mainProgram.getUniform('uLight.shininess');
+    const uLightAmbient = mainProgram.getUniform('uLight.ambient');
+
+    gl.uniform3fv(
+      uLightPosition,
+      new Float32Array([viewPosition[0], viewPosition[1], viewPosition[2]])
+    );
+    gl.uniform3fv(
+      uLightColor,
+      new Float32Array([light.color[0], light.color[1], light.color[2]])
+    );
+    gl.uniform1f(uLightShininess, light.shininess);
+    gl.uniform1f(uLightAmbient, light.ambient);
+  }
+
+  private _prepareMesh(mesh: Mesh3D, mode: 'base' | 'shadow' = 'base'): void {
+    if (!mesh) {
+      console.warn('GAME_prepareMesh: Mesh is not loaded!');
+    }
+
+    if (mode === 'base') {
+      if (!mainProgram?.isActive) {
+        console.warn('GAME_prepareToRender: Main program is not active!');
+        return;
+      }
+
+      const aVertexPosition = mainProgram.getAttribute('aVertexPosition');
+      const aNormal = mainProgram.getAttribute('aNormal');
+      const aTextureCoordinate = mainProgram.getAttribute('aTextureCoordinate');
+
+      gl.enableVertexAttribArray(aVertexPosition);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.vertexBuffer);
+      gl.vertexAttribPointer(
+        aVertexPosition,
+        mesh.buffers.vertexBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      gl.enableVertexAttribArray(aNormal);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.normalBuffer);
+      gl.vertexAttribPointer(
+        aNormal,
+        mesh.buffers.normalBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      gl.enableVertexAttribArray(aTextureCoordinate);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.textureBuffer);
+      gl.vertexAttribPointer(
+        aTextureCoordinate,
+        mesh.buffers.textureBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+
+      const uSampler = mainProgram.getUniform('uSampler');
+      const uHasTexture = mainProgram.getUniform('uHasTexture');
+      const uColor = mainProgram.getUniform('uColor');
+
+      if (mesh.textures.length) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
+        gl.uniform1i(uSampler, 0);
+        gl.uniform1f(uHasTexture, 1);
+      } else {
+        gl.uniform1f(uHasTexture, 0);
+        gl.uniform4fv(uColor, mesh.defaultColor);
+      }
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.indexBuffer);
+    } else if (mode === 'shadow') {
+      if (!shadowProgram.isActive) {
+        console.warn(
+          'GAME_prepareToShadowRender: Shadow program is not active!'
+        );
+      }
+
+      const aVertexPosition = shadowProgram.getAttribute('aVertexPosition');
+      gl.enableVertexAttribArray(aVertexPosition);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.vertexBuffer);
+      gl.vertexAttribPointer(
+        aVertexPosition,
+        mesh.buffers.vertexBuffer.itemSize,
+        gl.FLOAT,
+        false,
+        0,
+        0
+      );
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.indexBuffer);
+    }
+  }
+
+  private async _loadMesh(objUrl: string, textureUrl: string): Promise<Mesh3D> {
+    return await fetch(objUrl)
+      .then((response) => response.text())
+      .then(async (text) => {
+        const mesh = new Mesh3D(text);
+        mesh.buffers = this._buildBuffers(mesh);
+        mesh.texture = await this._loadTexture(textureUrl);
+        return mesh;
+      })
+      .catch((error) => {
+        console.error('Error loading .obj file:', error);
+        throw new Error(error);
+      });
+  }
+
+  private _buildBuffers(mesh: Mesh): Mesh3DBuffers {
+    return {
+      normalBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.vertexNormals, 3),
+      textureBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.textures, 2),
+      vertexBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.vertices, 3),
+      indexBuffer: this._buildBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, 1),
+    };
+  }
+
+  private _buildBuffer(
+    type: number,
+    data: any,
+    itemSize: number
+  ): ExtendedGLBuffer {
+    const buffer = gl.createBuffer() as ExtendedGLBuffer;
+    const arrayView = type === gl.ARRAY_BUFFER ? Float32Array : Uint16Array;
+    gl.bindBuffer(type, buffer);
+    gl.bufferData(type, new arrayView(data), gl.STATIC_DRAW);
+    buffer.itemSize = itemSize;
+    buffer.numItems = data.length / itemSize;
+    return buffer;
+  }
+
+  private async _loadTexture(url: string): Promise<WebGLTexture | null> {
+    return new Promise((resolve) => {
+      const texture = gl.createTexture();
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        if (anisotropicFilteringExtension) {
+          const maxAnisotropy = gl.getParameter(
+            anisotropicFilteringExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT
+          );
+          gl.texParameteri(
+            gl.TEXTURE_2D,
+            anisotropicFilteringExtension.TEXTURE_MAX_ANISOTROPY_EXT,
+            maxAnisotropy
+          );
+        }
+
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          image
+        );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(
+          gl.TEXTURE_2D,
+          gl.TEXTURE_MIN_FILTER,
+          gl.LINEAR_MIPMAP_LINEAR
+        );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.generateMipmap(gl.TEXTURE_2D);
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        resolve(texture);
+      };
+      image.src = url;
+    });
   }
 }

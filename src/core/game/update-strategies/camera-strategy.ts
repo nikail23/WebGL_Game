@@ -18,7 +18,7 @@ export class CameraStrategy extends UpdateStrategy {
   private isSprinting: boolean = false;
   private moveDirection: vec3 = vec3.create();
 
-  public init(current: Object3D): void {
+  public init(current: Object3D): CameraStrategy {
     document.addEventListener('keydown', (e) => {
       this._keys.add(e.code);
       if (e.code === 'Space' && this.isGrounded) {
@@ -45,6 +45,8 @@ export class CameraStrategy extends UpdateStrategy {
         );
       }
     });
+
+    return this;
   }
 
   public update(deltaTime: number, current: Object3D): void {

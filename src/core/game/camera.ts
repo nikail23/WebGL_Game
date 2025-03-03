@@ -1,25 +1,12 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { Object3D } from './object';
-import { CameraStrategy } from './update-strategies/camera-strategy';
 
 export class Camera extends Object3D {
-  public constructor(
-    public position: vec3,
-    public rotation: vec3,
-    public aspect: number,
-    public fov: number,
-    public near: number,
-    public far: number
-  ) {
-    super(
-      position,
-      rotation,
-      undefined,
-      undefined,
-      undefined,
-      new CameraStrategy()
-    );
-  }
+  public type = 'Camera';
+  public aspect: number = 1920 / 1080;
+  public fov: number = Math.PI / 4;
+  public near: number = 0.1;
+  public far: number = 100;
 
   public get viewMatrix(): mat4 {
     const viewMatrix = mat4.create();
