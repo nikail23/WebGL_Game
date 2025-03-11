@@ -23,6 +23,9 @@ export class Game {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
+    // Включаем blending для прозрачности
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
@@ -38,17 +41,18 @@ export class Game {
         {
           name: 'cube',
           objUrl: 'assets/models/cube/cube.obj',
-          textureUrl: 'assets/models/cube/cube.jpg',
         },
         {
           name: 'floor',
           objUrl: 'assets/models/floor/room_floor.obj',
-          textureUrl: 'assets/models/floor/room_floor.jpg',
         },
         {
           name: 'light',
           objUrl: 'assets/models/light/light.obj',
-          textureUrl: 'assets/models/light/light.jpg',
+        },
+        {
+          name: 'sphere',
+          objUrl: 'assets/models/sphere/sphere.obj',
         },
       ],
       objects: [
@@ -59,6 +63,7 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           textureScale: 1,
           model: 'cube',
+          textureUrl: 'assets/models/cube/cube.jpg',
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
@@ -67,6 +72,7 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           textureScale: 1,
           model: 'cube',
+          textureUrl: 'assets/models/cube/cube.jpg',
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
@@ -75,6 +81,7 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           textureScale: 1,
           model: 'cube',
+          textureUrl: 'assets/models/cube/cube.jpg',
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
@@ -83,6 +90,7 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           textureScale: 1,
           model: 'cube',
+          textureUrl: 'assets/models/cube/cube.jpg',
         },
         {
           type: SceneObjectEnum.PHYSICAL_OBJECT,
@@ -91,13 +99,14 @@ export class Game {
           scale: vec3.fromValues(100, 1, 100),
           textureScale: 100,
           model: 'floor',
+          textureUrl: 'assets/models/floor/room_floor.jpg',
         },
         {
           type: SceneObjectEnum.LIGHT,
           color: vec3.fromValues(1, 1, 1),
           shininess: 32,
           ambient: 0.2,
-          position: vec3.fromValues(0, 2, -5),
+          position: vec3.fromValues(8, 8, 8),
           lookAt: vec3.fromValues(0, 0, 0),
           fovy: Math.PI / 1.5,
           aspect: 1,
@@ -107,6 +116,7 @@ export class Game {
           textureScale: 1,
           scale: vec3.fromValues(0.001, 0.001, 0.001),
           rotation: vec3.fromValues(0, 0, 0),
+          textureUrl: 'assets/models/light/light.jpg',
         },
         {
           type: SceneObjectEnum.CAMERA,
@@ -116,6 +126,42 @@ export class Game {
           aspect,
           near: 0.1,
           far: 100,
+        },
+        {
+          type: SceneObjectEnum.PHYSICAL_OBJECT,
+          position: vec3.fromValues(2, 1, 2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          textureScale: 1,
+          model: 'sphere',
+          alpha: 0.35,
+        },
+        {
+          type: SceneObjectEnum.PHYSICAL_OBJECT,
+          position: vec3.fromValues(2, 1, -2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          textureScale: 1,
+          model: 'sphere',
+          alpha: 0.3,
+        },
+        {
+          type: SceneObjectEnum.PHYSICAL_OBJECT,
+          position: vec3.fromValues(-2, 1, 2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          textureScale: 1,
+          model: 'sphere',
+          alpha: 0.25,
+        },
+        {
+          type: SceneObjectEnum.PHYSICAL_OBJECT,
+          position: vec3.fromValues(-2, 1, -2),
+          rotation: vec3.fromValues(0, 0, 0),
+          scale: vec3.fromValues(1, 1, 1),
+          textureScale: 1,
+          model: 'sphere',
+          alpha: 0.2,
         },
       ],
       shadows: {

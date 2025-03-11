@@ -1,6 +1,5 @@
 import { Camera } from '../camera';
 import { Light3D } from '../light';
-import { Mesh3D, Mesh3DBuffers } from '../model';
 import { SceneData } from './scene-data';
 import {
   SceneCameraParams,
@@ -17,14 +16,14 @@ import {
   mainProgram,
   shadowProgram,
 } from '../../webgl';
-import { mat3, mat4, vec2, vec4 } from 'gl-matrix';
-import { ExtendedGLBuffer, Mesh } from 'webgl-obj-loader';
+import { mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix';
+import { Mesh, MeshWithBuffers, OBJ } from 'webgl-obj-loader';
 import { CameraStrategy } from '../update-strategies';
 import { Object3D } from '../object';
 
 export class Scene {
   private _camera: Camera = new Camera();
-  private _meshes: Mesh3D[] = [];
+  private _meshes: MeshWithBuffers[] = [];
   private _objects: Object3D[] = [];
   private _light: Light3D | null = null;
 
@@ -45,7 +44,7 @@ export class Scene {
   public async init(params: SceneParams): Promise<void> {
     await this._loadMeshes(params.meshes);
 
-    this._buildObjects(params.objects);
+    await this._buildObjects(params.objects);
 
     this._shadowsEnabled = params.shadows.enabled;
     if (this._shadowsEnabled) {
@@ -91,31 +90,31 @@ export class Scene {
     this._meshes = [];
 
     for (const params of meshesParams) {
-      const mesh = await this._loadMesh(params.objUrl, params.textureUrl);
+      const mesh = await this._loadMesh(params.objUrl);
       mesh.name = params.name;
       this._meshes.push(mesh);
     }
   }
 
-  private _buildObjects(objectParams: SceneObjectParams[]): void {
+  private async _buildObjects(
+    objectParams: SceneObjectParams[]
+  ): Promise<void> {
     this._objects = [];
 
-    objectParams.forEach((p) => {
+    for (const p of objectParams) {
       switch (p.type) {
         case SceneObjectEnum.PHYSICAL_OBJECT:
-          const object = this._buildPhysicalObject(p);
+          const object = await this._buildPhysicalObject(p);
           this._objects.push(object);
           break;
         case SceneObjectEnum.LIGHT:
-          this._light = this._buildLight(p);
+          this._light = await this._buildLight(p);
           break;
         case SceneObjectEnum.CAMERA:
           this._camera = this._buildCamera(p);
           break;
       }
-    });
-
-    console.log('Scene objects:', this._light);
+    }
   }
 
   private _buildCamera(p: SceneCameraParams): Camera {
@@ -130,7 +129,9 @@ export class Scene {
     return camera;
   }
 
-  private _buildPhysicalObject(p: ScenePhysiscleObjectParams): Object3D {
+  private async _buildPhysicalObject(
+    p: ScenePhysiscleObjectParams
+  ): Promise<Object3D> {
     const mesh = this._meshes.find((model) => model.name === p.model);
 
     if (!mesh) {
@@ -143,12 +144,29 @@ export class Scene {
     object.scale = p.scale;
     object.textureScale = p.textureScale;
     object.mesh = mesh;
+
     if (p.strategy) object.updateStrategy = p.strategy;
+
+    if (p.alpha !== undefined) {
+      object.baseColor[3] = p.alpha;
+    }
+
+    if (p.textureUrl) {
+      object.texture = await this._loadTexture(p.textureUrl);
+    }
+
+    if (p.baseColor) {
+      object.baseColor = p.baseColor;
+    }
+
+    if (p.baseColorValue !== undefined) {
+      object.baseColorValue = p.baseColorValue;
+    }
 
     return object;
   }
 
-  private _buildLight(p: SceneLightParams): Light3D {
+  private async _buildLight(p: SceneLightParams): Promise<Light3D> {
     const mesh = this._meshes.find((model) => model.name === p.model);
 
     if (!mesh) {
@@ -169,6 +187,22 @@ export class Scene {
     light.textureScale = p.textureScale;
     light.rotation = p.rotation;
     light.scale = p.scale;
+
+    if (p.alpha !== undefined) {
+      light.baseColor[3] = p.alpha;
+    }
+
+    if (p.textureUrl) {
+      light.texture = await this._loadTexture(p.textureUrl);
+    }
+
+    if (p.baseColor) {
+      light.baseColor = p.baseColor;
+    }
+
+    if (p.baseColorValue !== undefined) {
+      light.baseColorValue = p.baseColorValue;
+    }
 
     return light;
   }
@@ -362,7 +396,6 @@ export class Scene {
   private async _renderScene(): Promise<void> {
     if (this._camera) {
       const uViewMatrix = mainProgram.getUniform('uViewMatrix');
-
       gl.uniformMatrix4fv(uViewMatrix, false, this.viewMatrix);
 
       if (this._light) {
@@ -370,9 +403,37 @@ export class Scene {
         this._renderObject(this._light, 'base');
       }
 
+      // Разбиваем объекты на непрозрачные и прозрачные
+      const opaqueObjects: Object3D[] = [];
+      const transparentObjects: Object3D[] = [];
       for (const object of this._objects) {
+        // Если значение альфа меньше 1, считаем объект прозрачным
+        const alpha = object.baseColor[3] ?? 1.0;
+        if (alpha < 1.0) {
+          transparentObjects.push(object);
+        } else {
+          opaqueObjects.push(object);
+        }
+      }
+
+      // Рендерим непрозрачные объекты
+      for (const object of opaqueObjects) {
         await this._renderObject(object, 'base');
       }
+
+      // Сортируем прозрачные объекты по расстоянию от камеры (от дальней к ближней)
+      transparentObjects.sort((a, b) => {
+        const da = vec3.distance(this._camera.position, a.position);
+        const db = vec3.distance(this._camera.position, b.position);
+        return db - da;
+      });
+
+      // Отключаем запись в z-буфер и рендерим прозрачные объекты
+      gl.depthMask(false);
+      for (const object of transparentObjects) {
+        await this._renderObject(object, 'base');
+      }
+      gl.depthMask(true);
     }
   }
 
@@ -393,6 +454,14 @@ export class Scene {
 
     if (mode === 'base') {
       this._prepareMesh(object.mesh, mode);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, object.texture);
+      gl.uniform1i(mainProgram.getUniform('uSampler'), object.baseColorValue);
+      gl.uniform1f(
+        mainProgram.getUniform('uBaseColorMix'),
+        1 - object.baseColorValue
+      );
+      gl.uniform4fv(mainProgram.getUniform('uBaseColor'), object.baseColor);
       const normalMatrix = mat3.create();
       const viewModelMatrix = mat4.create();
       mat4.multiply(viewModelMatrix, this.viewMatrix, object.modelMatrix);
@@ -460,7 +529,10 @@ export class Scene {
     gl.uniform1f(uLightAmbient, light.ambient);
   }
 
-  private _prepareMesh(mesh: Mesh3D, mode: 'base' | 'shadow' = 'base'): void {
+  private _prepareMesh(
+    mesh: MeshWithBuffers,
+    mode: 'base' | 'shadow' = 'base'
+  ): void {
     if (!mesh) {
       console.warn('GAME_prepareMesh: Mesh is not loaded!');
     }
@@ -476,10 +548,10 @@ export class Scene {
       const aTextureCoordinate = mainProgram.getAttribute('aTextureCoordinate');
 
       gl.enableVertexAttribArray(aVertexPosition);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.vertexBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
       gl.vertexAttribPointer(
         aVertexPosition,
-        mesh.buffers.vertexBuffer.itemSize,
+        mesh.vertexBuffer.itemSize,
         gl.FLOAT,
         false,
         0,
@@ -487,10 +559,10 @@ export class Scene {
       );
 
       gl.enableVertexAttribArray(aNormal);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.normalBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
       gl.vertexAttribPointer(
         aNormal,
-        mesh.buffers.normalBuffer.itemSize,
+        mesh.normalBuffer.itemSize,
         gl.FLOAT,
         false,
         0,
@@ -498,26 +570,17 @@ export class Scene {
       );
 
       gl.enableVertexAttribArray(aTextureCoordinate);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.textureBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
       gl.vertexAttribPointer(
         aTextureCoordinate,
-        mesh.buffers.textureBuffer.itemSize,
+        mesh.textureBuffer.itemSize,
         gl.FLOAT,
         false,
         0,
         0
       );
 
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
-      gl.uniform1i(mainProgram.getUniform('uSampler'), mesh.baseColorValue);
-      gl.uniform1f(
-        mainProgram.getUniform('uBaseColorMix'),
-        1 - mesh.baseColorValue
-      );
-      gl.uniform4fv(mainProgram.getUniform('uBaseColor'), mesh.baseColor);
-
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.indexBuffer);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
     } else if (mode === 'shadow') {
       if (!shadowProgram.isActive) {
         console.warn(
@@ -527,55 +590,27 @@ export class Scene {
 
       const aVertexPosition = shadowProgram.getAttribute('aVertexPosition');
       gl.enableVertexAttribArray(aVertexPosition);
-      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffers.vertexBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
       gl.vertexAttribPointer(
         aVertexPosition,
-        mesh.buffers.vertexBuffer.itemSize,
+        mesh.vertexBuffer.itemSize,
         gl.FLOAT,
         false,
         0,
         0
       );
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.buffers.indexBuffer);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
     }
   }
 
-  private async _loadMesh(objUrl: string, textureUrl: string): Promise<Mesh3D> {
+  private async _loadMesh(objUrl: string): Promise<MeshWithBuffers> {
     return await fetch(objUrl)
       .then((response) => response.text())
-      .then(async (text) => {
-        const mesh = new Mesh3D(text);
-        mesh.buffers = this._buildBuffers(mesh);
-        mesh.texture = await this._loadTexture(textureUrl);
-        return mesh;
-      })
+      .then((text) => OBJ.initMeshBuffers(gl, new Mesh(text)))
       .catch((error) => {
         console.error('Error loading .obj file:', error);
         throw new Error(error);
       });
-  }
-
-  private _buildBuffers(mesh: Mesh): Mesh3DBuffers {
-    return {
-      normalBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.vertexNormals, 3),
-      textureBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.textures, 2),
-      vertexBuffer: this._buildBuffer(gl.ARRAY_BUFFER, mesh.vertices, 3),
-      indexBuffer: this._buildBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, 1),
-    };
-  }
-
-  private _buildBuffer(
-    type: number,
-    data: any,
-    itemSize: number
-  ): ExtendedGLBuffer {
-    const buffer = gl.createBuffer() as ExtendedGLBuffer;
-    const arrayView = type === gl.ARRAY_BUFFER ? Float32Array : Uint16Array;
-    gl.bindBuffer(type, buffer);
-    gl.bufferData(type, new arrayView(data), gl.STATIC_DRAW);
-    buffer.itemSize = itemSize;
-    buffer.numItems = data.length / itemSize;
-    return buffer;
   }
 
   private async _loadTexture(url: string): Promise<WebGLTexture | null> {

@@ -1,10 +1,9 @@
-import { vec3 } from 'gl-matrix';
+import { vec3, vec4 } from 'gl-matrix';
 import { UpdateStrategy } from '../update-strategies';
 
 export interface SceneMeshParams {
   name: string;
   objUrl: string;
-  textureUrl: string;
 }
 
 export type SceneObjectParams =
@@ -26,6 +25,10 @@ export interface ScenePhysiscleObjectParams {
   textureScale: number;
   model: string;
   strategy?: UpdateStrategy;
+  alpha?: number;
+  textureUrl?: string;
+  baseColor?: vec4;
+  baseColorValue?: number;
 }
 
 export interface SceneLightParams {
@@ -43,6 +46,10 @@ export interface SceneLightParams {
   textureScale: number;
   rotation: vec3;
   scale: vec3;
+  alpha?: number;
+  textureUrl?: string;
+  baseColor?: vec4;
+  baseColorValue?: number;
 }
 
 export interface SceneCameraParams {

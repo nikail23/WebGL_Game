@@ -1,7 +1,7 @@
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 import { SceneData } from './scene';
 import { UpdateStrategy } from './update-strategies';
-import { Mesh3D } from './model';
+import { MeshWithBuffers } from 'webgl-obj-loader';
 
 export class Object3D {
   public type = 'Object3D';
@@ -10,8 +10,16 @@ export class Object3D {
   public rotation = vec3.create();
   public scale = vec3.create();
   public updateStrategy: UpdateStrategy | null = null;
-  public mesh?: Mesh3D;
+  public mesh?: MeshWithBuffers;
   public textureScale = 1;
+  public baseColor = vec4.fromValues(
+    Math.random(),
+    Math.random(),
+    Math.random(),
+    1
+  );
+  public baseColorValue = 1;
+  public texture: WebGLTexture | null = null;
 
   public update(deltaTime: number, sceneData: SceneData): void {
     this.updateStrategy?.update(deltaTime, this, sceneData);

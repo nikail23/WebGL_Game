@@ -80,5 +80,5 @@ void main() {
   vec4 textureColor = texture(uSampler, vTexture);
   vec4 baseColor = mix(uBaseColor, textureColor, uBaseColorMix);
   vec3 totalColor = calculateReflection(baseColor.rgb);
-  fragColor = vec4(totalColor, baseColor.a);
+  fragColor = vec4(totalColor, uBaseColor.a);
 }
