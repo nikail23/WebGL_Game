@@ -6,5 +6,11 @@ declare module 'spectorjs' {
     public captureCanvas(canvas: HTMLCanvasElement): void;
     public stopCapture(): void;
     public spyCanvases(): void;
+    public onCaptureStarted: (capture: any) => void;
+    public onCapture: (capture: any) => void;
+    public onError: (message: string) => void;
+    public clearCapture(): void;
+    public pauseCapture(): void;
+    public resumeCapture(): void;
   }
 }

@@ -15,7 +15,7 @@ export class HUD {
     document.body.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d')!;
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', this.resize.bind(this));
   }
 
   public addElement(element: HUDElement): void {
@@ -43,5 +43,13 @@ export class HUD {
   private resize(): void {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+  }
+
+  public dispose(): void {
+    window.removeEventListener('resize', this.resize.bind(this));
+    if (this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas);
+    }
+    this.elements = [];
   }
 }

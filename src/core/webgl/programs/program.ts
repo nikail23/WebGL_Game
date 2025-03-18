@@ -110,7 +110,10 @@ export abstract class Program {
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
       const info = gl.getShaderInfoLog(shader);
       gl.deleteShader(shader);
-      throw new Error('Shader compilation error: ' + info);
+      const shaderType = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
+      throw new Error(
+        `${shaderType} shader compilation error: ${info}\n\nSource:\n${source}`
+      );
     }
 
     return shader;

@@ -39,7 +39,8 @@ export class Scene {
   private _shadowsEnabled = false;
   private _staticShadowMap: WebGLTexture | null = null;
   private _quadBuffer: WebGLBuffer | null = null;
-  private _noiseTexture: WebGLTexture | null = null;
+  private _lensFlareNoiseTexture: WebGLTexture | null = null;
+  private _lensFlareScreenTexture: WebGLTexture | null = null;
 
   private get viewMatrix(): mat4 {
     return this._camera.viewMatrix;
@@ -58,10 +59,35 @@ export class Scene {
     this._shadowsEnabled = !!this._shadowMapFrameBufferData && !!this._light;
 
     if (this._light?.lensFlare) {
-      this._noiseTexture = await this._loadTexture(
-        '/src/assets/textures/noise-256.png'
-      );
+      await this._initLensFlare();
     }
+  }
+
+  private async _initLensFlare(): Promise<void> {
+    this._lensFlareNoiseTexture = await this._loadTexture(
+      '/src/assets/textures/noise-256.png'
+    );
+
+    if (this._lensFlareScreenTexture) {
+      gl.deleteTexture(this._lensFlareScreenTexture);
+    }
+
+    this._lensFlareScreenTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._lensFlareScreenTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.canvas.width,
+      gl.canvas.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
   public async render(): Promise<void> {
@@ -376,33 +402,35 @@ export class Scene {
         this._prepareLight(this._light);
         this._renderObject(this._light, 'base');
 
-        const data = this._shadowMapFrameBufferData!;
+        if (this._shadowsEnabled && this._shadowMapFrameBufferData) {
+          const data = this._shadowMapFrameBufferData;
 
-        if (this._shadowsEnabled) {
           this._staticShadowMap = !this._staticShadowMap
             ? await this._renderStaticShadowMap(data.width, data.height)
             : this._staticShadowMap;
 
-          const uShadowMap = mainProgram.getUniform('uShadowMap');
+          if (this._staticShadowMap) {
+            const uShadowMap = mainProgram.getUniform('uShadowMap');
 
-          gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
-          gl.uniform1i(uShadowMap, 1);
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
+            gl.uniform1i(uShadowMap, 1);
 
-          const uLightViewProjectionMatrix = mainProgram.getUniform(
-            'uLightViewProjectionMatrix'
-          );
-          const uShadowMapSize = mainProgram.getUniform('uShadowMapSize');
+            const uLightViewProjectionMatrix = mainProgram.getUniform(
+              'uLightViewProjectionMatrix'
+            );
+            const uShadowMapSize = mainProgram.getUniform('uShadowMapSize');
 
-          gl.uniformMatrix4fv(
-            uLightViewProjectionMatrix,
-            false,
-            this._light.getLightViewProjectionMatrix()
-          );
-          gl.uniform2fv(
-            uShadowMapSize,
-            vec2.fromValues(data.width, data.height)
-          );
+            gl.uniformMatrix4fv(
+              uLightViewProjectionMatrix,
+              false,
+              this._light.getLightViewProjectionMatrix()
+            );
+            gl.uniform2fv(
+              uShadowMapSize,
+              vec2.fromValues(data.width, data.height)
+            );
+          }
         }
       }
 
@@ -447,19 +475,7 @@ export class Scene {
   }
 
   private _renderLensFlare(light: Light3D): void {
-    const screenTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, screenTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.canvas.width,
-      gl.canvas.height,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      null
-    );
+    gl.bindTexture(gl.TEXTURE_2D, this._lensFlareScreenTexture);
     gl.copyTexImage2D(
       gl.TEXTURE_2D,
       0,
@@ -470,9 +486,6 @@ export class Scene {
       gl.canvas.height,
       0
     );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.bindTexture(gl.TEXTURE_2D, null);
 
     lensFlareProgram.use();
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -482,7 +495,7 @@ export class Scene {
       gl.canvas.height
     );
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this._lensFlareScreenTexture);
     gl.uniform1i(lensFlareProgram.getUniform('uScreenTexture'), 0);
 
     const lightPosWorld = vec4.fromValues(
@@ -512,12 +525,10 @@ export class Scene {
 
     gl.uniform3fv(lensFlareProgram.getUniform('tint'), light.color);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this._noiseTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this._lensFlareNoiseTexture);
     gl.uniform1i(lensFlareProgram.getUniform('noise_texture'), 1);
 
     this._drawFullScreenQuad();
-
-    gl.deleteTexture(screenTexture);
   }
 
   private _drawFullScreenQuad(): void {
@@ -746,5 +757,51 @@ export class Scene {
       };
       image.src = url;
     });
+  }
+
+  // Add resource cleanup method
+  public dispose(): void {
+    // Delete shadow map frame buffer and textures
+    if (this._shadowMapFrameBufferData) {
+      gl.deleteFramebuffer(this._shadowMapFrameBufferData.frameBuffer);
+      gl.deleteTexture(this._shadowMapFrameBufferData.colorTexture);
+      gl.deleteTexture(this._shadowMapFrameBufferData.depthTexture);
+      this._shadowMapFrameBufferData = null;
+    }
+
+    // Delete static shadow map
+    if (this._staticShadowMap) {
+      gl.deleteTexture(this._staticShadowMap);
+      this._staticShadowMap = null;
+    }
+
+    // Delete lens flare textures
+    if (this._lensFlareScreenTexture) {
+      gl.deleteTexture(this._lensFlareScreenTexture);
+      this._lensFlareScreenTexture = null;
+    }
+
+    if (this._lensFlareNoiseTexture) {
+      gl.deleteTexture(this._lensFlareNoiseTexture);
+      this._lensFlareNoiseTexture = null;
+    }
+
+    // Delete quad buffer
+    if (this._quadBuffer) {
+      gl.deleteBuffer(this._quadBuffer);
+      this._quadBuffer = null;
+    }
+
+    // Delete object textures
+    this._objects.forEach((obj) => {
+      if (obj.texture) {
+        gl.deleteTexture(obj.texture);
+        obj.texture = null;
+      }
+    });
+
+    this._meshes = [];
+    this._objects = [];
+    this._light = null;
   }
 }

@@ -1,3 +1,4 @@
+import { gl } from '../context';
 import { Program } from './program';
 
 export class ShadowProgram extends Program {
@@ -10,5 +11,12 @@ export class ShadowProgram extends Program {
     this.addAttribute('aVertexPosition');
     this.addUniform('uModelMatrix');
     this.addUniform('uLightViewProjectionMatrix');
+  }
+
+  public dispose(): void {
+    if (this.program) {
+      gl.deleteProgram(this.program);
+      this.program = null;
+    }
   }
 }

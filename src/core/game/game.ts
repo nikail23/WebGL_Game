@@ -10,6 +10,9 @@ export class Game {
   private lastTime: number;
   private hud: HUD;
   private scene: Scene;
+  private running: boolean = false;
+  private contextLostHandler: (e: Event) => void;
+  private contextRestoredHandler: (e: Event) => void;
 
   constructor() {
     this.scene = new Scene();
@@ -17,6 +20,10 @@ export class Game {
     this.hud = new HUD();
     this.hud.addElement(new Crosshair());
     this.hud.addElement(new FpsCounter());
+
+    // Initialize context event handlers
+    this.contextLostHandler = this.handleContextLost.bind(this);
+    this.contextRestoredHandler = this.handleContextRestored.bind(this);
   }
 
   private async initWebGL(): Promise<void> {
@@ -27,6 +34,27 @@ export class Game {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Add context loss and restore event listeners
+    canvas.addEventListener('webglcontextlost', this.contextLostHandler);
+    canvas.addEventListener(
+      'webglcontextrestored',
+      this.contextRestoredHandler
+    );
+  }
+
+  private handleContextLost(e: Event): void {
+    console.warn('WebGL context lost. Stopping rendering loop.');
+    e.preventDefault();
+    this.running = false;
+  }
+
+  private async handleContextRestored(): Promise<void> {
+    console.log('WebGL context restored. Reinitializing...');
+    await this.initWebGL();
+    await this.initScene();
+    this.running = true;
+    requestAnimationFrame(this.gameLoop.bind(this));
   }
 
   private initListeners(): void {
@@ -209,11 +237,14 @@ export class Game {
 
   public async start(): Promise<void> {
     await this.initGame();
+    this.running = true;
     requestAnimationFrame(this.gameLoop.bind(this));
   }
 
   private gameLoop(timestamp: number): void {
-    const deltaTime = timestamp - this.lastTime;
+    if (!this.running) return;
+
+    const deltaTime = Math.min(timestamp - this.lastTime, 100);
     this.lastTime = timestamp;
 
     this.update(deltaTime);
@@ -232,5 +263,20 @@ export class Game {
     await this.scene.render();
 
     this.hud.draw();
+  }
+
+  public dispose(): void {
+    this.running = false;
+
+    // Remove event listeners
+    canvas.removeEventListener('webglcontextlost', this.contextLostHandler);
+    canvas.removeEventListener(
+      'webglcontextrestored',
+      this.contextRestoredHandler
+    );
+
+    // Dispose resources
+    this.scene.dispose();
+    this.hud.dispose();
   }
 }
