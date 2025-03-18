@@ -508,19 +508,19 @@ export class Scene {
     vec4.transformMat4(viewPos, lightPosWorld, this.viewMatrix);
     const clipPos = vec4.create();
     vec4.transformMat4(clipPos, viewPos, this._camera.projectionMatrix);
-    if (clipPos[3] <= 0.0) {
-      return;
-    }
+    const w = clipPos[3];
     vec4.scale(clipPos, clipPos, 1.0 / clipPos[3]);
-    const normalizedSunPos = vec2.fromValues(
+    const normalizedSunPos = vec3.fromValues(
       clipPos[0] * 0.5,
-      clipPos[1] * 0.5
+      clipPos[1] * 0.5,
+      w
     );
 
-    gl.uniform2f(
+    gl.uniform3f(
       lensFlareProgram.getUniform('sun_position'),
       normalizedSunPos[0],
-      normalizedSunPos[1]
+      normalizedSunPos[1],
+      normalizedSunPos[2]
     );
 
     gl.uniform3fv(lensFlareProgram.getUniform('tint'), light.color);

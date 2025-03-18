@@ -1,7 +1,7 @@
 #version 300 es
 precision mediump float;
 
-uniform vec2 sun_position;
+uniform vec3 sun_position;
 uniform vec3 tint;
 uniform sampler2D noise_texture;
 uniform vec2 uResolution;
@@ -85,11 +85,16 @@ void main() {
     vec2 texResolution = vec2(textureSize(noise_texture, 0));
     vec2 uv = screenUV - vec2(0.5f);
     uv.x *= aspect;
-    vec2 mouse = sun_position;
+    vec2 mouse = vec2(sun_position);
+    float w = sun_position.z;
     mouse.x *= aspect;
     vec4 previousColor = texture(uScreenTexture, screenUV);
 
     vec3 color = previousColor.rgb;
+    if(w <= 0.0f) {
+        fragColor = vec4(color, 1.0f);
+        return;
+    }
     color += tint * lensflare(uv, mouse, texResolution);
     color -= noise_vec2(gl_FragCoord.xy, texResolution) * 0.015f;
     color = cc(color, 0.5f, 0.1f);
