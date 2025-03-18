@@ -1,7 +1,8 @@
-import { mainProgram, Game, shadowProgram } from './core';
+import { mainProgram, Game, shadowProgram, lensFlareProgram } from './core';
 
 await mainProgram.init();
 await shadowProgram.init();
+await lensFlareProgram.init();
 
 mainProgram.use();
 

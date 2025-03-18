@@ -25,6 +25,7 @@
     "webpack-obj-loader": "^1.0.4"
   },
   "dependencies": {
+    "canvas": "^3.1.0",
     "gl-matrix": "^3.4.3",
     "spectorjs": "^0.9.30",
     "webgl-obj-loader": "^2.0.8"

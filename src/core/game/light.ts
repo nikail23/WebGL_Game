@@ -12,6 +12,7 @@ export class Light3D extends Object3D {
   public aspect = 1;
   public near = 0.1;
   public far = 100;
+  public lensFlare = true;
 
   public getLightViewProjectionMatrix(): mat4 {
     const lightProjectionMatrix = mat4.create();

@@ -15,6 +15,7 @@ import {
   gl,
   mainProgram,
   shadowProgram,
+  lensFlareProgram,
 } from '../../webgl';
 import { mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix';
 import { Mesh, MeshWithBuffers, OBJ } from 'webgl-obj-loader';
@@ -36,6 +37,8 @@ export class Scene {
   } | null = null;
   private _shadowsEnabled = false;
   private _staticShadowMap: WebGLTexture | null = null;
+  private _quadBuffer: WebGLBuffer | null = null;
+  private _noiseTexture: WebGLTexture | null = null;
 
   private get viewMatrix(): mat4 {
     return this._camera.viewMatrix;
@@ -47,33 +50,21 @@ export class Scene {
     await this._buildObjects(params.objects);
 
     this._shadowsEnabled = params.shadows.enabled;
-    if (this._shadowsEnabled) {
-      this._shadowMapFrameBufferData = this._createFrameBufferObject(
-        params.shadows?.width ?? 1024,
-        params.shadows?.height ?? 1024
-      );
+    this._shadowMapFrameBufferData = this._createFrameBufferObject(
+      params.shadows?.width ?? 1024,
+      params.shadows?.height ?? 1024
+    );
+    this._shadowsEnabled = !!this._shadowMapFrameBufferData && !!this._light;
 
-      this._shadowsEnabled = !!this._shadowMapFrameBufferData && !!this._light;
+    if (this._light?.lensFlare) {
+      this._noiseTexture = await this._loadTexture(
+        '/src/assets/textures/noise-256.png'
+      );
     }
   }
 
   public async render(): Promise<void> {
     if (this._camera) {
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.uniformMatrix4fv(
-        mainProgram.getUniform('uProjectionMatrix'),
-        false,
-        this._camera.projectionMatrix
-      );
-      gl.uniform1f(
-        mainProgram.getUniform('uHasShadows'),
-        this._shadowsEnabled ? 1 : 0
-      );
-
-      if (this._shadowsEnabled) {
-        await this._prepareShadows();
-      }
-
       await this._renderScene();
     }
   }
@@ -205,36 +196,6 @@ export class Scene {
     }
 
     return light;
-  }
-
-  private async _prepareShadows(): Promise<void> {
-    const data = this._shadowMapFrameBufferData!;
-    const light = this._light!;
-
-    if (!this._staticShadowMap) {
-      this._staticShadowMap = await this._renderStaticShadowMap(
-        data.width,
-        data.height
-      );
-
-      const uShadowMap = mainProgram.getUniform('uShadowMap');
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
-      gl.uniform1i(uShadowMap, 1);
-    }
-
-    const uLightViewProjectionMatrix = mainProgram.getUniform(
-      'uLightViewProjectionMatrix'
-    );
-    const uShadowMapSize = mainProgram.getUniform('uShadowMapSize');
-
-    gl.uniformMatrix4fv(
-      uLightViewProjectionMatrix,
-      false,
-      light.getLightViewProjectionMatrix()
-    );
-    gl.uniform2fv(uShadowMapSize, vec2.fromValues(data.width, data.height));
   }
 
   private _createFrameBufferObject(width: number, height: number) {
@@ -395,19 +356,59 @@ export class Scene {
 
   private async _renderScene(): Promise<void> {
     if (this._camera) {
+      mainProgram.use();
+
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.uniformMatrix4fv(
+        mainProgram.getUniform('uProjectionMatrix'),
+        false,
+        this._camera.projectionMatrix
+      );
+      gl.uniform1f(
+        mainProgram.getUniform('uHasShadows'),
+        this._shadowsEnabled ? 1 : 0
+      );
+
       const uViewMatrix = mainProgram.getUniform('uViewMatrix');
       gl.uniformMatrix4fv(uViewMatrix, false, this.viewMatrix);
 
       if (this._light) {
         this._prepareLight(this._light);
         this._renderObject(this._light, 'base');
+
+        const data = this._shadowMapFrameBufferData!;
+
+        if (this._shadowsEnabled) {
+          this._staticShadowMap = !this._staticShadowMap
+            ? await this._renderStaticShadowMap(data.width, data.height)
+            : this._staticShadowMap;
+
+          const uShadowMap = mainProgram.getUniform('uShadowMap');
+
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, this._staticShadowMap);
+          gl.uniform1i(uShadowMap, 1);
+
+          const uLightViewProjectionMatrix = mainProgram.getUniform(
+            'uLightViewProjectionMatrix'
+          );
+          const uShadowMapSize = mainProgram.getUniform('uShadowMapSize');
+
+          gl.uniformMatrix4fv(
+            uLightViewProjectionMatrix,
+            false,
+            this._light.getLightViewProjectionMatrix()
+          );
+          gl.uniform2fv(
+            uShadowMapSize,
+            vec2.fromValues(data.width, data.height)
+          );
+        }
       }
 
-      // Разбиваем объекты на непрозрачные и прозрачные
       const opaqueObjects: Object3D[] = [];
       const transparentObjects: Object3D[] = [];
       for (const object of this._objects) {
-        // Если значение альфа меньше 1, считаем объект прозрачным
         const alpha = object.baseColor[3] ?? 1.0;
         if (alpha < 1.0) {
           transparentObjects.push(object);
@@ -416,24 +417,25 @@ export class Scene {
         }
       }
 
-      // Рендерим непрозрачные объекты
       for (const object of opaqueObjects) {
         await this._renderObject(object, 'base');
       }
 
-      // Сортируем прозрачные объекты по расстоянию от камеры (от дальней к ближней)
       transparentObjects.sort((a, b) => {
         const da = vec3.distance(this._camera.position, a.position);
         const db = vec3.distance(this._camera.position, b.position);
         return db - da;
       });
 
-      // Отключаем запись в z-буфер и рендерим прозрачные объекты
       gl.depthMask(false);
       for (const object of transparentObjects) {
         await this._renderObject(object, 'base');
       }
       gl.depthMask(true);
+
+      if (this._light?.lensFlare) {
+        this._renderLensFlare(this._light);
+      }
     }
   }
 
@@ -444,10 +446,101 @@ export class Scene {
     };
   }
 
+  private _renderLensFlare(light: Light3D): void {
+    const screenTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.canvas.width,
+      gl.canvas.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+    gl.copyTexImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      0,
+      0,
+      gl.canvas.width,
+      gl.canvas.height,
+      0
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    lensFlareProgram.use();
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(
+      lensFlareProgram.getUniform('uResolution'),
+      gl.canvas.width,
+      gl.canvas.height
+    );
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, screenTexture);
+    gl.uniform1i(lensFlareProgram.getUniform('uScreenTexture'), 0);
+
+    const lightPosWorld = vec4.fromValues(
+      light.position[0],
+      light.position[1],
+      light.position[2],
+      1.0
+    );
+    const viewPos = vec4.create();
+    vec4.transformMat4(viewPos, lightPosWorld, this.viewMatrix);
+    const clipPos = vec4.create();
+    vec4.transformMat4(clipPos, viewPos, this._camera.projectionMatrix);
+    if (clipPos[3] <= 0.0) {
+      return;
+    }
+    vec4.scale(clipPos, clipPos, 1.0 / clipPos[3]);
+    const normalizedSunPos = vec2.fromValues(
+      clipPos[0] * 0.5,
+      clipPos[1] * 0.5
+    );
+
+    gl.uniform2f(
+      lensFlareProgram.getUniform('sun_position'),
+      normalizedSunPos[0],
+      normalizedSunPos[1]
+    );
+
+    gl.uniform3fv(lensFlareProgram.getUniform('tint'), light.color);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._noiseTexture);
+    gl.uniform1i(lensFlareProgram.getUniform('noise_texture'), 1);
+
+    this._drawFullScreenQuad();
+
+    gl.deleteTexture(screenTexture);
+  }
+
+  private _drawFullScreenQuad(): void {
+    if (!this._quadBuffer) {
+      this._quadBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._quadBuffer);
+      const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._quadBuffer);
+    const aPosition = lensFlareProgram.getAttribute('aVertexPosition');
+    gl.enableVertexAttribArray(aPosition);
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
   private async _renderObject(
     object: Object3D,
     mode: 'base' | 'shadow'
   ): Promise<void> {
+    if (object.type === 'Light3D') {
+    }
+
     if (!object.mesh || !object.visible) {
       return;
     }
