@@ -17,18 +17,22 @@ export enum SceneObjectEnum {
   CAMERA = 'camera',
 }
 
+export interface TextureParams {
+  url: string;
+  scale: number;
+  baseColor?: vec4;
+  enable?: boolean;
+  alpha?: number;
+}
+
 export interface ScenePhysiscleObjectParams {
   type: SceneObjectEnum.PHYSICAL_OBJECT;
   position: vec3;
   rotation: vec3;
   scale: vec3;
-  textureScale: number;
   model: string;
   strategy?: UpdateStrategy;
-  alpha?: number;
-  textureUrl?: string;
-  baseColor?: vec4;
-  baseColorValue?: number;
+  texture: TextureParams;
 }
 
 export interface SceneLightParams {
@@ -43,13 +47,9 @@ export interface SceneLightParams {
   near: number;
   far: number;
   model: string;
-  textureScale: number;
   rotation: vec3;
   scale: vec3;
-  alpha?: number;
-  textureUrl?: string;
-  baseColor?: vec4;
-  baseColorValue?: number;
+  texture: TextureParams;
 }
 
 export interface SceneCameraParams {

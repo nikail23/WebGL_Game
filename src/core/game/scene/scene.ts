@@ -9,6 +9,7 @@ import {
   SceneObjectParams,
   SceneParams,
   ScenePhysiscleObjectParams,
+  TextureParams,
 } from './scene-params';
 import {
   anisotropicFilteringExtension,
@@ -133,28 +134,42 @@ export class Scene {
     object.position = p.position;
     object.rotation = p.rotation;
     object.scale = p.scale;
-    object.textureScale = p.textureScale;
     object.mesh = mesh;
 
     if (p.strategy) object.updateStrategy = p.strategy;
 
-    if (p.alpha !== undefined) {
-      object.baseColor[3] = p.alpha;
+    this._setTextureParams(object, p.texture);
+
+    return object;
+  }
+
+  private async _setTextureParams(
+    o: Object3D,
+    p?: TextureParams
+  ): Promise<void> {
+    if (!p) {
+      return;
     }
 
-    if (p.textureUrl) {
-      object.texture = await this._loadTexture(p.textureUrl);
+    if (p.alpha !== undefined) {
+      o.baseColor[3] = p.alpha;
+    }
+
+    if (p.url) {
+      o.texture = await this._loadTexture(p.url);
+    }
+
+    if (p.scale !== undefined) {
+      o.textureScale = p.scale;
     }
 
     if (p.baseColor) {
-      object.baseColor = p.baseColor;
+      o.baseColor = p.baseColor;
     }
 
-    if (p.baseColorValue !== undefined) {
-      object.baseColorValue = p.baseColorValue;
+    if (p.enable !== undefined) {
+      o.baseColorValue = p.enable ? 0 : 1;
     }
-
-    return object;
   }
 
   private async _buildLight(p: SceneLightParams): Promise<Light3D> {
@@ -175,25 +190,10 @@ export class Scene {
     light.near = p.near;
     light.far = p.far;
     light.mesh = mesh;
-    light.textureScale = p.textureScale;
     light.rotation = p.rotation;
     light.scale = p.scale;
 
-    if (p.alpha !== undefined) {
-      light.baseColor[3] = p.alpha;
-    }
-
-    if (p.textureUrl) {
-      light.texture = await this._loadTexture(p.textureUrl);
-    }
-
-    if (p.baseColor) {
-      light.baseColor = p.baseColor;
-    }
-
-    if (p.baseColorValue !== undefined) {
-      light.baseColorValue = p.baseColorValue;
-    }
+    this._setTextureParams(light, p.texture);
 
     return light;
   }
@@ -538,9 +538,6 @@ export class Scene {
     object: Object3D,
     mode: 'base' | 'shadow'
   ): Promise<void> {
-    if (object.type === 'Light3D') {
-    }
-
     if (!object.mesh || !object.visible) {
       return;
     }
