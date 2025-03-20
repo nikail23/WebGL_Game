@@ -2,8 +2,8 @@ import { Program } from './program';
 
 export class MainProgram extends Program {
   public async init(): Promise<void> {
-    const vsPath = '/src/core/webgl/shaders/base/vertex.glsl';
-    const fsPath = '/src/core/webgl/shaders/base/fragment.glsl';
+    const vsPath = '/assets/shaders/base/vertex.glsl';
+    const fsPath = '/assets/shaders/base/fragment.glsl';
 
     this.program = await this.setProgram(vsPath, fsPath);
 

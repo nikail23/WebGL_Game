@@ -92,7 +92,6 @@ export class Game {
           texture: {
             scale: 1,
             url: 'assets/models/cube/cube.jpg',
-            enable: true,
           },
           model: 'cube',
         },
@@ -104,7 +103,6 @@ export class Game {
           texture: {
             scale: 1,
             url: 'assets/models/cube/cube.jpg',
-            enable: true,
           },
           model: 'cube',
         },
@@ -116,7 +114,6 @@ export class Game {
           texture: {
             scale: 1,
             url: 'assets/models/cube/cube.jpg',
-            enable: true,
           },
           model: 'cube',
         },
@@ -128,7 +125,6 @@ export class Game {
           texture: {
             scale: 1,
             url: 'assets/models/cube/cube.jpg',
-            enable: true,
           },
           model: 'cube',
         },
@@ -140,7 +136,6 @@ export class Game {
           texture: {
             scale: 100,
             url: 'assets/models/floor/room_floor.jpg',
-            enable: true,
           },
           model: 'floor',
         },
@@ -179,7 +174,6 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           texture: {
             scale: 1,
-            url: 'assets/models/sphere/sphere.jpg',
             alpha: 0.35,
           },
           model: 'sphere',
@@ -191,7 +185,6 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           texture: {
             scale: 1,
-            url: 'assets/models/sphere/sphere.jpg',
             alpha: 0.3,
           },
           model: 'sphere',
@@ -203,7 +196,6 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           texture: {
             scale: 1,
-            url: 'assets/models/sphere/sphere.jpg',
             alpha: 0.25,
           },
           model: 'sphere',
@@ -215,7 +207,6 @@ export class Game {
           scale: vec3.fromValues(1, 1, 1),
           texture: {
             scale: 1,
-            url: 'assets/models/sphere/sphere.jpg',
             alpha: 0.2,
           },
           model: 'sphere',

@@ -18,10 +18,9 @@ export enum SceneObjectEnum {
 }
 
 export interface TextureParams {
-  url: string;
-  scale: number;
+  url?: string;
+  scale?: number;
   baseColor?: vec4;
-  enable?: boolean;
   alpha?: number;
 }
 

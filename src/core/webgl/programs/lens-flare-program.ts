@@ -2,8 +2,8 @@ import { Program } from './program';
 
 export class LensFlareProgram extends Program {
   public async init(): Promise<void> {
-    const vsPath = '/src/core/webgl/shaders/lens-flare/vertex.glsl';
-    const fsPath = '/src/core/webgl/shaders/lens-flare/fragment.glsl';
+    const vsPath = '/assets/shaders/lens-flare/vertex.glsl';
+    const fsPath = '/assets/shaders/lens-flare/fragment.glsl';
 
     this.program = await this.setProgram(vsPath, fsPath);
 

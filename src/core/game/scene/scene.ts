@@ -65,7 +65,7 @@ export class Scene {
 
   private async _initLensFlare(): Promise<void> {
     this._lensFlareNoiseTexture = await this._loadTexture(
-      '/src/assets/textures/noise-256.png'
+      '/assets/textures/noise-256.png'
     );
 
     if (this._lensFlareScreenTexture) {
@@ -193,9 +193,7 @@ export class Scene {
       o.baseColor = p.baseColor;
     }
 
-    if (p.enable !== undefined) {
-      o.baseColorValue = p.enable ? 0 : 1;
-    }
+    o.baseColorValue = p.url ? 0 : 1;
   }
 
   private async _buildLight(p: SceneLightParams): Promise<Light3D> {
